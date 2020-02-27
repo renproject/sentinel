@@ -66,7 +66,7 @@ export const main = async (_args: readonly string[]) => {
         integrations: ((integrations: Array<{ name: string }>) => {
             // integrations will be all default integrations
             return integrations.filter((integration) => {
-                return integration.name !== "OnUncaughtException" && integration.name !== "OnUnhandledRejection";
+                return integration.name !== "OnUncaughtException" && integration.name !== "OnUnhandledRejection" && integration.name !== "Http";
             });
         }) as any, // tslint:disable-line: no-any
     });
