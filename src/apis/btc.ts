@@ -19,7 +19,9 @@ export const btcVerifyBurn = async (contractReader: ContractReader, logger: Logg
         const address = contractReader.sdk.utils[token].addressFrom(item.address);
         const target = item.amount;
 
-        logger.info(`[${network}][${token}] Checking ${address} received ${target.toFixed()} (${item.ref.toFixed()})`);
+        const diffMinutes = moment().diff(item.timestamp * 1000, "minutes");
+
+        logger.info(`[${network}][${token}] Checking ${address} received ${target.toFixed()} (${item.ref.toFixed()}) (${diffMinutes} minutes ago)`);
 
         const url = network === Network.Chaosnet ?
             (token === Token.BTC ? "bitcoin" : token === Token.BCH ? "bitcoin-cash" : "") :
@@ -67,7 +69,6 @@ export const btcVerifyBurn = async (contractReader: ContractReader, logger: Logg
             }
         }
         if (!item.received) {
-            const diffMinutes = moment().diff(item.timestamp * 1000, "minutes");
             const errorMessage = `[burn-sentry] ${network.toLowerCase()} ${item.token} burn #${item.ref.toFixed()} not found (${diffMinutes} minutes ago) - ${item.amount.div(new BigNumber(10).exponentiatedBy(8)).toFixed()} ${item.token} to ${address}`;
             console.log(`[WARNING] ${errorMessage}`);
             if (diffMinutes > 10 && !item.sentried) {
