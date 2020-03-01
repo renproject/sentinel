@@ -46,7 +46,7 @@ export const setupApp = (
             <body>
                 <div class="section">
                     <h1>ChaosDEX Trading Bot</h1>
-                    <p style="color: green">Online (${process.env.NETWORK})</p>
+                    <p style="color: green">Online</p>
                 </div>
                 <div class="section">
                     <h3>Balances</h3>

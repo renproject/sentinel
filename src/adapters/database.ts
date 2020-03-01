@@ -3,7 +3,7 @@ import { Set } from "immutable";
 import PGP from "pg-promise";
 import pg from "pg-promise/typescript/pg-subset";
 
-import { Burn, Network, networks, Token, tokens } from "../types/types";
+import { Burn, Network, networks, networkTokens, Token } from "../types/types";
 
 const pgp = PGP();
 
@@ -41,6 +41,10 @@ export class Database {
         );
 
         for (const network of networks) {
+            const tokens = networkTokens.get(network);
+            if (!tokens) {
+                continue;
+            }
             for (const token of tokens) {
                 if (drop) {
                     await this.client.query(`DROP TABLE BURNS_${this.networkTokenID(network, token)};`);

@@ -1,34 +1,37 @@
 import RenJS from "@renproject/ren";
-import { NetworkDetails } from "@renproject/ren/build/main/types/networks";
 import BigNumber from "bignumber.js";
+import { Map } from "immutable";
 import Web3 from "web3";
 import { sha3 } from "web3-utils";
 import { Logger } from "winston";
 
 import { Burn, Network, Token } from "../types/types";
 
+let web3s = Map<string, Web3>();
+
 const getWeb3 = (network: string) => {
     const infuraURL = `https://${network}.infura.io/v3/${process.env.INFURA_KEY}`;
-    return new Web3(infuraURL);
+
+    if (web3s.has(infuraURL)) {
+        return web3s.get(infuraURL);
+    }
+
+    const web3 = new Web3(infuraURL);
+    web3s = web3s.set(infuraURL, web3);
+    return web3;
 };
 
 export class ContractReader {
     public web3: Web3 | undefined;
     public sdk: RenJS | undefined;
-    public renNetwork: NetworkDetails | undefined;
-    // private readonly logger: Logger;
 
     constructor(_logger: Logger) {
         // this.logger = logger;
     }
 
-    public readonly connect = async (): Promise<ContractReader> => {
-        this.renNetwork =
-            process.env.NETWORK === "chaosnet"
-                ? RenJS.NetworkDetails.NetworkChaosnet
-                : RenJS.NetworkDetails.NetworkTestnet;
-        this.web3 = getWeb3(this.renNetwork.isTestnet ? "kovan" : "mainnet");
-        this.sdk = new RenJS(this.renNetwork);
+    public readonly connect = async (network: Network): Promise<ContractReader> => {
+        this.sdk = new RenJS(network.toLowerCase());
+        this.web3 = getWeb3(this.sdk.network.isTestnet ? "kovan" : "mainnet");
         return this;
     };
 
@@ -62,6 +65,24 @@ export class ContractReader {
                     case Token.BCH:
                         return "0xa76beA11766E0b66bD952bc357CF027742021a8C";
                 }
+            case Network.Testnet:
+                switch (token) {
+                    case Token.BTC:
+                        return "0x7e6E1D8F26D2b49B2fB4C3B6f5b7dad8d8ea781b";
+                    case Token.ZEC:
+                        return "0x1615f5a285134925Fb4D87812827863fde046fDa";
+                    case Token.BCH:
+                        return "0xea08e98E56f1088E2001fAB8369A1c9fEEc58Ec9";
+                }
+            case Network.Devnet:
+                switch (token) {
+                    case Token.BTC:
+                        return "0xCAae05102081Eea2Dc573488f44fe7e45f5BD441";
+                    case Token.ZEC:
+                        return "0x494644199dE72f32E320d99E48169DE0d7977BA8";
+                    case Token.BCH:
+                        return "0x112dBA369B25cebbb739d7576F6E4aC2b582448A";
+                }
         }
         throw new Error(`Unknown network (${network}) and token (${token}) combination.`);
     }
@@ -80,6 +101,9 @@ export class ContractReader {
             toBlock: currentBlock.toString(),
             topics: [sha3("LogShiftOut(bytes,uint256,uint256,bytes)")],
         });
+        if (events.length > 0) {
+            console.log(`[${network}][${token}] Got ${events.length} events. Getting timestamps...`);
+        }
 
         // const events = [{
         //     address: '0x1258d7FF385d1d81017d4a3d464c02f74C61902a',
@@ -94,12 +118,19 @@ export class ContractReader {
         //     id: 'log_0x7662a5baaf039f096a5d3992a6cdd284ef407def1966b2899f2092afe9141d74'
         // }];
 
-        const burns: Burn[] = await Promise.all(events.map(async event => {
+        const burns: Burn[] = [];
+
+        for (let i = 0; i < events.length; i++) {
+            const event = events[i];
             if (!this.web3) {
                 throw new Error("Web3 not defined");
             }
 
             const decoded = this.web3.eth.abi.decodeParameters(["bytes", "uint256"], event.data);
+
+            if (i > 0 && i % 50 === 0) {
+                console.log(`[${network}][${token}] Got timestamp ${i}/${events.length}...`);
+            }
 
             const blocknumber = event.blockNumber;
             const timestamp = new BigNumber((await this.web3.eth.getBlock(blocknumber)).timestamp).toNumber();
@@ -115,8 +146,9 @@ export class ContractReader {
                 timestamp,
                 sentried: false,
             };
-            return burn;
-        }));
+            // return burn;
+            burns.push(burn);
+        }
 
         return { burns, currentBlock };
     }

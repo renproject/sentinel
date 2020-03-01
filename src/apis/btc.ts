@@ -20,7 +20,16 @@ export const btcVerifyBurn = async (contractReader: ContractReader, logger: Logg
         const target = item.amount;
 
         logger.info(`[${network}][${token}] Checking ${address} received ${target.toFixed()} (${item.ref.toFixed()})`);
-        const response = (await Axios.get<BlockChairAddress>(`https://api.blockchair.com/${token === Token.BTC ? "bitcoin" : token === Token.BCH ? "bitcoin-cash" : ""}/dashboards/address/${address}?transaction_details=true`)).data;
+
+        const url = network === Network.Chaosnet ?
+            (token === Token.BTC ? "bitcoin" : token === Token.BCH ? "bitcoin-cash" : "") :
+            (token === Token.BTC ? "bitcoin/testnet" : "");
+
+        if (url === "") {
+            return;
+        }
+
+        const response = (await Axios.get<BlockChairAddress>(`https://api.blockchair.com/${url}/dashboards/address/${address}?transaction_details=true`)).data;
 
         if (target.lte(10000)) {
             item.received = true;
@@ -58,10 +67,10 @@ export const btcVerifyBurn = async (contractReader: ContractReader, logger: Logg
             }
         }
         if (!item.received) {
-            console.log(`WARNING! No deposits found. Fees: ${fees.join(", ")} --- taken: ${taken.join(", ")} --- past: ${past.join(", ")}`);
             const diffMinutes = moment().diff(item.timestamp * 1000, "minutes");
+            const errorMessage = `[burn-sentry] ${network.toLowerCase()} ${item.token} burn #${item.ref.toFixed()} not found (${diffMinutes} minutes ago) - ${item.amount.div(new BigNumber(10).exponentiatedBy(8)).toFixed()} ${item.token} to ${address}`;
+            console.log(`[WARNING] ${errorMessage}`);
             if (diffMinutes > 10 && !item.sentried) {
-                const errorMessage = `[burn-sentry] ${network.toLowerCase()} ${item.token} burn #${item.ref.toFixed()} not found (${diffMinutes} minutes ago) - ${item.amount.div(new BigNumber(10).exponentiatedBy(8)).toFixed()} ${item.token} to ${address}`;
                 if (reportError(errorMessage)) {
                     item.sentried = true;
                     await database.updateBurn(item);
