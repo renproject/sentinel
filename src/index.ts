@@ -1,3 +1,4 @@
+import Axios from "axios";
 import { config } from "dotenv";
 import { List, Map } from "immutable";
 import { Logger } from "winston";
@@ -59,6 +60,14 @@ const tick = async (network: Network, contractReader: ContractReader, logger: Lo
 };
 
 export const main = async (_args: readonly string[]) => {
+
+    try {
+        console.log(Axios.get("https://sochain.com/api/v2/get_info/DOGE"));
+    } catch (error) {
+        console.error(error);
+    }
+
+
     // Set up sentry
     Sentry.init({
         dsn: process.env.SENTRY_DSN,
