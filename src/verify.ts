@@ -58,7 +58,11 @@ export const verifyBurn = async (contractReader: ContractReader, logger: Logger,
             const takenBy = await database.txIsFree(network, token, utxo.txHash);
             const txIsFree = takenBy.length === 0;
             console.log(`[DEBUG] Checking UTXO with fee ${fee.toFixed()} (${timeBetweenBurnAndUTXO}) ${!txIsFree ? `(taken by #${takenBy[0].ref} - ${timeDifference(utxo.time - takenBy[0].timestamp)})` : ""}`);
-            if (txTimestamp >= item.timestamp && (fee.isEqualTo(10601) || fee.isEqualTo(5000) || fee.isEqualTo(5301)) && txIsFree) {
+            if (
+                txTimestamp >= item.timestamp &&
+                (fee.isEqualTo(10601) || fee.isEqualTo(5301) || fee.isEqualTo(3533) || fee.isEqualTo(3534) || fee.isEqualTo(2651) || fee.isEqualTo(2121)) &&
+                txIsFree
+            ) {
                 item.txHash = utxo.txHash;
                 item.received = true;
                 await database.updateBurn(item);
