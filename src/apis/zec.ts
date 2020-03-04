@@ -29,22 +29,20 @@ export const getZECTransactions = async (network: Network, token: Token, address
             if (response.length < limit) {
                 break;
             }
-            console.log(`\n\n\nMore than 20! (${currentOffset})\n\n`);
             currentOffset += limit;
         }
 
         for (const utxo of utxos) {
-            let balanceChange = 0;
-            for (const vout of utxo.vout) {
+            for (let i = 0; i < utxo.vout.length; i++) {
+                const vout = utxo.vout[i];
                 if (vout.scriptPubKey.addresses && vout.scriptPubKey.addresses.includes(address)) {
-                    balanceChange = balanceChange + vout.valueZat;
+                    ret = ret.push({
+                        txHash: `${utxo.hash}_${i}`,
+                        time: utxo.timestamp,
+                        balanceChange: vout.valueZat,
+                    });
                 }
             }
-            ret = ret.push({
-                txHash: utxo.hash,
-                time: utxo.timestamp,
-                balanceChange,
-            });
         }
 
     } else {
@@ -53,17 +51,16 @@ export const getZECTransactions = async (network: Network, token: Token, address
         const utxos = (await Axios.get<ZecInsightAddress>(URL)).data.items;
 
         for (const utxo of utxos) {
-            let balanceChange = new BigNumber(0);
-            for (const vout of utxo.vout) {
+            for (let i = 0; i < utxo.vout.length; i++) {
+                const vout = utxo.vout[i];
                 if (vout.scriptPubKey.addresses && vout.scriptPubKey.addresses.includes(address)) {
-                    balanceChange = balanceChange.plus(new BigNumber(vout.value).times(new BigNumber(10).exponentiatedBy(8)));
+                    ret = ret.push({
+                        txHash: `${utxo.blockhash}_${i}`,
+                        time: utxo.time,
+                        balanceChange: new BigNumber(vout.value).times(new BigNumber(10).exponentiatedBy(8)).toNumber(),
+                    });
                 }
             }
-            ret = ret.push({
-                txHash: utxo.blockhash,
-                time: utxo.time,
-                balanceChange: balanceChange.decimalPlaces(0).toNumber(),
-            });
         }
     }
 

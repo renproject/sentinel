@@ -89,7 +89,7 @@ export const verifyBurn = async (contractReader: ContractReader, logger: Logger,
             }
 
             if (diffMinutes > 10 && !item.sentried) {
-                if (reportError(errorMessage)) {
+                if (reportError(errorMessage, { network, token, ref: item.ref, address, timeAgo: naturalDiff, amount: `${adjust(item.amount)} ${item.token}` })) {
                     item.sentried = true;
                     await database.updateBurn(item);
                 }
