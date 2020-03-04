@@ -52,6 +52,7 @@ export const verifyBurn = async (contractReader: ContractReader, logger: Logger,
             }
             const txTimestamp = utxo.time;
 
+            // const minutesBetweenBurnAndUTXO = moment.unix(utxo.time).diff(moment.unix(item.timestamp), "minutes");
             const timeBetweenBurnAndUTXO = timeDifference(utxo.time - item.timestamp);
 
             const fee = target.minus(utxo.balanceChange);
@@ -60,7 +61,7 @@ export const verifyBurn = async (contractReader: ContractReader, logger: Logger,
             console.log(`[DEBUG] Checking UTXO with fee ${fee.toFixed()} (${timeBetweenBurnAndUTXO}) ${!txIsFree ? `(taken by #${takenBy[0].ref} - ${timeDifference(utxo.time - takenBy[0].timestamp)})` : ""}`);
             if (
                 txTimestamp >= item.timestamp &&
-                (fee.isEqualTo(10601) || fee.isEqualTo(5301) || fee.isEqualTo(3533) || fee.isEqualTo(3534) || fee.isEqualTo(2651) || fee.isEqualTo(2121)) &&
+                (fee.isEqualTo(10601) || fee.isEqualTo(5301) || fee.isEqualTo(3533) || fee.isEqualTo(3535) || fee.isEqualTo(2651) || fee.isEqualTo(2121)) &&
                 txIsFree
             ) {
                 item.txHash = utxo.txHash;
@@ -89,7 +90,17 @@ export const verifyBurn = async (contractReader: ContractReader, logger: Logger,
             }
 
             if (diffMinutes > 10 && !item.sentried) {
-                if (reportError(errorMessage, { network, token, ref: item.ref, address, timeAgo: naturalDiff, amount: `${adjust(item.amount)} ${item.token}` })) {
+                if (reportError(
+                    errorMessage,
+                    {
+                        network,
+                        token,
+                        ref: item.ref,
+                        address,
+                        timeAgo: naturalDiff,
+                        amount: `${adjust(item.amount)} ${item.token}`,
+                    }
+                )) {
                     item.sentried = true;
                     await database.updateBurn(item);
                 }
