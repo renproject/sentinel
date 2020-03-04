@@ -16,7 +16,7 @@ export enum Token {
 
 export const networkTokens = Map<Network, Token[]>()
     .set(Network.Chaosnet, [Token.BTC, Token.ZEC, Token.BCH])
-    .set(Network.Testnet, [Token.BTC])
+    .set(Network.Testnet, [Token.BTC, Token.ZEC])
     .set(Network.Devnet, [Token.BTC]);
 
 export const TokenDecimals = Map<Token, number>()
@@ -35,4 +35,5 @@ export interface Burn {
     txHash: string | null;
     timestamp: number;
     sentried: boolean;
+    ignored: boolean;
 }

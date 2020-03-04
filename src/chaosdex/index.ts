@@ -145,6 +145,7 @@ export class ContractReader {
                 txHash: "",
                 timestamp,
                 sentried: false,
+                ignored: false,
             };
             // return burn;
             burns.push(burn);

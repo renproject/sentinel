@@ -1,4 +1,3 @@
-import Axios from "axios";
 import { config } from "dotenv";
 import { List, Map } from "immutable";
 import { Logger } from "winston";
@@ -6,10 +5,10 @@ import { Logger } from "winston";
 import { Database } from "./adapters/database";
 import { createLogger } from "./adapters/logger";
 import { setupApp } from "./adapters/server";
-import { btcVerifyBurn } from "./apis/btc";
 import { ContractReader } from "./chaosdex";
 import { sleep } from "./lib/misc";
-import { Network, networks, networkTokens, Token } from "./types/types";
+import { Network, networks, networkTokens } from "./types/types";
+import { verifyBurn } from "./verify";
 
 const Sentry = require("@sentry/node");
 
@@ -37,6 +36,10 @@ const tick = async (network: Network, contractReader: ContractReader, logger: Lo
         const previousBlock = await database.getLatestBlock(network, token);
 
         const { burns, currentBlock } = await contractReader.getNewLogs(network, token, previousBlock);
+        // if (network === Network.Testnet && token === Token.ZEC) {
+        //     await database.setLatestBlock(network, token, currentBlock);
+        //     continue;
+        // }
 
         logger.info(`[${network}][${token}] Got ${burns.length} burns from block #${previousBlock.toString()} until block #${currentBlock.toString()}`);
 
@@ -48,25 +51,15 @@ const tick = async (network: Network, contractReader: ContractReader, logger: Lo
 
     for (const token of tokens) {
         const items = List(await database.getBurns(network, token, true)).sortBy(i => i.ref.toNumber());
+        console.log("\n");
         logger.info(`[${network}][${token}] ${items.size} burns to check...`);
         for (const item of items.values()) {
-            if (token === Token.BTC || token === Token.BCH) {
-                await btcVerifyBurn(contractReader, logger, database, network, token, item);
-            } else {
-                // Can't verify zcash
-            }
+            await verifyBurn(contractReader, logger, database, network, token, item);
         }
     }
 };
 
 export const main = async (_args: readonly string[]) => {
-
-    try {
-        console.log(Axios.get("https://sochain.com/api/v2/get_info/DOGE"));
-    } catch (error) {
-        console.error(error);
-    }
-
 
     // Set up sentry
     Sentry.init({

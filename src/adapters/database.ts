@@ -1,5 +1,4 @@
 import BigNumber from "bignumber.js";
-import { Set } from "immutable";
 import PGP from "pg-promise";
 import pg from "pg-promise/typescript/pg-subset";
 
@@ -57,12 +56,13 @@ export class Database {
                         received BOOLEAN,
                         txhash CHAR(200),
                         timestamp DECIMAL NOT NULL,
-                        sentried BOOLEAN NOT NULL
+                        sentried BOOLEAN NOT NULL,
+                        ignored BOOLEAN NOT NULL
                     );`,
                 );
                 // await this.client.query(`
                 //     ALTER TABLE BURNS_${this.networkTokenID(network, token)}
-                //     ADD COLUMN sentried BOOLEAN NOT NULL DEFAULT false;
+                //     ADD COLUMN ignored BOOLEAN NOT NULL DEFAULT false;
                 // `);
             }
         }
@@ -100,29 +100,33 @@ export class Database {
 
     public networkTokenID = (network: Network, token: Token): string => `${network}_${token}`;
 
+    public unmarshalRow = (network: Network, token: Token) => (row: { ref: number, amount: string, address: string, received: boolean, txhash: string, timestamp: number, sentried: boolean, ignored: boolean }) => {
+        const ret: Burn = {
+            ref: new BigNumber(row.ref),
+            network,
+            token,
+            amount: new BigNumber(row.amount),
+            address: row.address,
+            received: row.received,
+            txHash: row.txhash,
+            timestamp: row.timestamp,
+            sentried: row.sentried,
+            ignored: row.ignored,
+        };
+        return ret;
+    }
+
     public getBurns = async (network: Network, token: Token, onlyNotReceived: boolean): Promise<readonly Burn[]> => {
         if (!this.client) {
             throw new Error(`No client setup, please call 'connect'`);
         }
 
-
-        return (await this.client.query(onlyNotReceived ? `SELECT * FROM BURNS_${this.networkTokenID(network, token)} WHERE received=false;` : `SELECT * FROM BURNS_${this.networkTokenID(network, token)};`)).map(
-            // tslint:disable-next-line: no-any
-            (row: { ref: number, amount: string, address: string, received: boolean, txhash: string, timestamp: number, sentried: boolean }) => {
-                const ret: Burn = {
-                    ref: new BigNumber(row.ref),
-                    network,
-                    token,
-                    amount: new BigNumber(row.amount),
-                    address: row.address,
-                    received: row.received,
-                    txHash: row.txhash,
-                    timestamp: row.timestamp,
-                    sentried: row.sentried,
-                };
-                return ret;
-            },
+        const query = await this.client.query(onlyNotReceived ?
+            `SELECT * FROM BURNS_${this.networkTokenID(network, token)} WHERE received=false AND ignored=false;` :
+            `SELECT * FROM BURNS_${this.networkTokenID(network, token)};`
         );
+
+        return query.map(this.unmarshalRow(network, token));
     };
 
     public updateBurn = async (trade: Burn) => {
@@ -131,14 +135,15 @@ export class Database {
         }
 
         await this.client.query(
-            `INSERT INTO BURNS_${this.networkTokenID(trade.network, trade.token)} VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (ref) DO UPDATE
+            `INSERT INTO BURNS_${this.networkTokenID(trade.network, trade.token)} VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (ref) DO UPDATE
                 SET 
                 amount = $2,
                 address = $3,
                 received = $4,
                 txhash = $5,
                 timestamp = $6,
-                sentried = $7
+                sentried = $7,
+                ignored = $8
                 ;`,
 
             [
@@ -149,20 +154,17 @@ export class Database {
                 trade.txHash,
                 trade.timestamp,
                 trade.sentried,
+                trade.ignored,
             ],
         );
     };
 
-    public txIsFree = async (network: Network, token: Token, txHash: string) => {
+    public txIsFree = async (network: Network, token: Token, txHash: string): Promise<readonly Burn[]> => {
         if (!this.client) {
             throw new Error(`No client setup, please call 'connect'`);
         }
 
-        return Set((await this.client.query(`SELECT * FROM BURNS_${this.networkTokenID(network, token)} WHERE received=true AND txhash=$1;`, [txHash])).map(
-            // tslint:disable-next-line: no-any
-            (row: { ref: number, amount: string, address: string, received: boolean, txhash: string }) => {
-                return row.txhash;
-            },
-        )).size === 0;
+        const query = await this.client.query(`SELECT * FROM BURNS_${this.networkTokenID(network, token)} WHERE received=true AND txhash=$1;`, [txHash]);
+        return query.map(this.unmarshalRow(network, token));
     };
 }
