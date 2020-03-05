@@ -129,6 +129,16 @@ export class Database {
         return query.map(this.unmarshalRow(network, token));
     };
 
+    public getBurn = async (network: Network, token: Token, burnRef: number): Promise<Burn | undefined> => {
+        if (!this.client) {
+            throw new Error(`No client setup, please call 'connect'`);
+        }
+
+        const query = await this.client.query(`SELECT * FROM BURNS_${this.networkTokenID(network, token)} WHERE ref=$1;`, [burnRef]);
+        const burns = query.map(this.unmarshalRow(network, token));
+        return burns.length === 0 ? undefined : burns[0];
+    };
+
     public updateBurn = async (trade: Burn) => {
         if (!this.client) {
             throw new Error(`No client setup, please call 'connect'`);
