@@ -1,10 +1,14 @@
+import cors from "cors";
 import express from "express";
+import { List } from "immutable";
 import { Logger } from "winston";
 
 import { networks, networkTokens } from "../types/types";
 import { Database } from "./database";
 
 const app = express();
+app.use(cors());
+
 const port = process.env.PORT || 3000;
 
 export const setupApp = (
@@ -23,7 +27,7 @@ export const setupApp = (
                 continue;
             }
             for (const token of tokens) {
-                const burns = await database.getBurns(network, token, true);
+                const burns = List(await database.getBurns(network, token, true)).sortBy(burn => burn.ref).toArray();
                 json[network.toLowerCase()][token.toLowerCase()] = burns;
             }
         }

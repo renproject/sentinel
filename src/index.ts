@@ -53,7 +53,7 @@ const tick = async (network: Network, contractReader: ContractReader, logger: Lo
         const items = List(await database.getBurns(network, token, true)).sortBy(i => i.ref.toNumber());
         console.log("\n");
         logger.info(`[${network}][${token}] ${items.size} burns to check...`);
-        for (const item of items.reverse().values()) {
+        for (const item of items.values()) {
             await verifyBurn(contractReader, logger, database, network, token, item);
         }
     }

@@ -1,4 +1,5 @@
 import BigNumber from "bignumber.js";
+import chalk from "chalk";
 import moment from "moment";
 import { Logger } from "winston";
 
@@ -35,10 +36,10 @@ export const verifyBurn = async (contractReader: ContractReader, logger: Logger,
 
         const fees: string[] = [];
         const taken: string[] = [];
-        const past: string[] = [];
+        // const past: string[] = [];
 
         const transactions = token === Token.ZEC ?
-            await getZECTransactions(network, token, address) :
+            await getZECTransactions(network, token, address, item.timestamp) :
             await getBTCTransactions(network, token, address);
 
         const sortedUtxos = transactions.sortBy(tx => (new Date(`${tx.time} UTC`)).getTime());
@@ -47,47 +48,64 @@ export const verifyBurn = async (contractReader: ContractReader, logger: Logger,
 
         for (const utxo of sortedUtxos.valueSeq()) {
             const balanceChange = new BigNumber(utxo.balanceChange);
+            // A transaction out, not in
             if (balanceChange.isLessThan(0)) {
                 continue;
             }
+
             const txTimestamp = utxo.time;
 
-            // const minutesBetweenBurnAndUTXO = moment.unix(utxo.time).diff(moment.unix(item.timestamp), "minutes");
+            // Too early
+            if (utxo.time < txTimestamp) {
+                continue;
+            }
+
+            // Sent too much
+            const fee = target.minus(utxo.balanceChange);
+            if (fee.lt(0)) {
+                continue;
+            }
+
+            const minutesBetweenBurnAndUTXO = moment.unix(utxo.time).diff(moment.unix(item.timestamp), "minutes");
             const timeBetweenBurnAndUTXO = timeDifference(utxo.time - item.timestamp);
 
-            const fee = target.minus(utxo.balanceChange);
             const takenBy = await database.txIsFree(network, token, utxo.txHash);
             const txIsFree = takenBy.length === 0;
-            console.log(`[DEBUG] Checking UTXO with fee ${fee.toFixed()} (${timeBetweenBurnAndUTXO}) ${!txIsFree ? `(taken by #${takenBy[0].ref} - ${timeDifference(utxo.time - takenBy[0].timestamp)})` : ""}`);
+            console.log(`[DEBUG] Checking UTXO ${utxo.txHash.slice(0, 6)}...${utxo.txHash.slice(utxo.txHash.length - 6)} (${utxo.numberOfVOuts} vOuts) for ${utxo.balanceChange} with fee ${fee.toFixed()} (${timeBetweenBurnAndUTXO}) ${!txIsFree ? `(taken by #${takenBy[0].ref} - ${timeDifference(utxo.time - takenBy[0].timestamp)})` : ""}`);
+
+            const rightAmount = utxo.numberOfVOuts === undefined ?
+                (fee.isEqualTo(10601) || fee.isEqualTo(5301) || fee.isEqualTo(3535) || fee.isEqualTo(2651) || fee.isEqualTo(2121)) :
+                (fee.isEqualTo(Math.ceil(10600 / (utxo.numberOfVOuts - 1)) + 1));
             if (
+                minutesBetweenBurnAndUTXO >= 0 && minutesBetweenBurnAndUTXO <= 15 &&
                 txTimestamp >= item.timestamp &&
-                (fee.isEqualTo(10601) || fee.isEqualTo(5301) || fee.isEqualTo(3533) || fee.isEqualTo(3535) || fee.isEqualTo(2651) || fee.isEqualTo(2121)) &&
+                rightAmount &&
                 txIsFree
             ) {
                 item.txHash = utxo.txHash;
                 item.received = true;
                 await database.updateBurn(item);
-                console.log(`[INFO] Found! Fee is ${fee.toFixed()} (${timeBetweenBurnAndUTXO})`);
+                console.log(chalk.green(`[INFO] Found! ${utxo.balanceChange}. Fee is ${fee.toFixed()} (${timeBetweenBurnAndUTXO})`));
                 return;
             } else if (txTimestamp >= item.timestamp && txIsFree && fee.gte(0)) {
                 fees.push(`${adjust(balanceChange)} (${timeBetweenBurnAndUTXO})`);
             } else if (txTimestamp >= item.timestamp && fee.gte(0)) {
                 taken.push(`${adjust(utxo.balanceChange.toFixed())} (${timeBetweenBurnAndUTXO})`);
-            } else if (fee.gte(0)) {
-                past.push(`${adjust(utxo.balanceChange.toFixed())} (${timeBetweenBurnAndUTXO})`);
+                // } else if (fee.gte(0)) {
+                //     past.push(`${adjust(utxo.balanceChange.toFixed())} (${timeBetweenBurnAndUTXO})`);
             }
         }
         if (!item.received) {
-            let errorMessage = `[burn-sentry] ${network.toLowerCase()} ${item.token} burn #${item.ref.toFixed()} not found (${naturalDiff}) - ${adjust(item.amount)} ${item.token} to ${address}`;
+            let errorMessage = `[burn-sentry] ${network.toLowerCase()} ${item.token} #${item.ref.toFixed()} (${naturalDiff}) - ${adjust(item.amount)} ${item.token} to ${address} - burn not found`;
             if (fees.length > 0) {
                 errorMessage += ` - Other utxos: ${fees.join(", ")}`;
             }
             if (taken.length > 0) {
                 errorMessage += ` - Taken: ${taken.join(", ")}`;
             }
-            if (past.length > 0) {
-                errorMessage += ` - Too early: ${past.join(", ")}`;
-            }
+            // if (past.length > 0) {
+            //     errorMessage += ` - Too early: ${past.join(", ")}`;
+            // }
 
             if (diffMinutes > 10 && !item.sentried) {
                 if (reportError(
@@ -105,7 +123,7 @@ export const verifyBurn = async (contractReader: ContractReader, logger: Logger,
                     await database.updateBurn(item);
                 }
             } else {
-                console.log(`[WARNING] ${errorMessage}`);
+                console.log(chalk.yellow(`[WARNING] ${errorMessage}`));
             }
         }
     } catch (error) {

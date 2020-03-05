@@ -8,6 +8,7 @@ export interface StdTransaction {
     txHash: string;
     time: number;
     balanceChange: number;
+    numberOfVOuts: number | undefined;
 }
 
 export const getBTCTransactions = async (network: Network, token: Token, address: string): Promise<List<StdTransaction>> => {
@@ -24,5 +25,6 @@ export const getBTCTransactions = async (network: Network, token: Token, address
         txHash: `${utxo.hash}_${utxo.balance_change}`,
         time: (new Date(`${utxo.time} UTC`)).getTime() / 1000,
         balanceChange: utxo.balance_change,
+        numberOfVOuts: undefined,
     }));
 };
