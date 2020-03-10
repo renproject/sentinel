@@ -77,7 +77,7 @@ export const verifyBurn = async (contractReader: ContractReader, logger: Logger,
                 (fee.isEqualTo(10601) || fee.isEqualTo(5301) || fee.isEqualTo(3535) || fee.isEqualTo(2651) || fee.isEqualTo(2121)) :
                 (fee.isEqualTo(Math.ceil(10600 / (utxo.numberOfVOuts - 1)) + 1));
             if (
-                minutesBetweenBurnAndUTXO >= 0 && minutesBetweenBurnAndUTXO <= 15 &&
+                minutesBetweenBurnAndUTXO >= 0 && minutesBetweenBurnAndUTXO <= 50 &&
                 txTimestamp >= item.timestamp &&
                 rightAmount &&
                 txIsFree
@@ -96,7 +96,7 @@ export const verifyBurn = async (contractReader: ContractReader, logger: Logger,
             }
         }
         if (!item.received) {
-            let errorMessage = `[burn-sentry] ${network.toLowerCase()} ${item.token} #${item.ref.toFixed()} (${naturalDiff}) - ${adjust(item.amount)} ${item.token} to ${address} - burn not found`;
+            let errorMessage = `🔥🔥🔥 [burn-sentry] ${network.toLowerCase()} ${item.token} #${item.ref.toFixed()} (${naturalDiff}) - ${adjust(item.amount)} ${item.token} to ${address} - burn not found`;
             if (fees.length > 0) {
                 errorMessage += ` - Other utxos: ${fees.join(", ")}`;
             }
