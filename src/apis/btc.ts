@@ -22,7 +22,7 @@ export const getBTCTransactions = async (network: Network, token: Token, address
 
     const response = (await Axios.get<BlockChairAddress>(`https://api.blockchair.com/${url}/dashboards/address/${address}?transaction_details=true`)).data;
     return List(response.data[address].transactions).map(utxo => ({
-        txHash: `${utxo.hash}_${utxo.balance_change}`,
+        txHash: `${utxo.hash}_${address}_${utxo.balance_change}`,
         time: (new Date(`${utxo.time} UTC`)).getTime() / 1000,
         balanceChange: utxo.balance_change,
         numberOfVOuts: undefined,
