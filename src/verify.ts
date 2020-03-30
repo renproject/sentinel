@@ -42,7 +42,7 @@ export const verifyBurn = async (contractReader: ContractReader, logger: Logger,
             await getZECTransactions(network, token, address, item.timestamp) :
             await getBTCTransactions(network, token, address);
 
-        const sortedUtxos = transactions.sortBy(tx => (new Date(`${tx.time} UTC`)).getTime());
+        const sortedUtxos = transactions.sortBy(tx => (new Date(`${tx.time} UTC`)).getTime()).reverse();
 
         const adjust = (value: BigNumber | string): string => new BigNumber(value).div(new BigNumber(10).exponentiatedBy(8)).toFixed();
 
@@ -73,11 +73,22 @@ export const verifyBurn = async (contractReader: ContractReader, logger: Logger,
             const txIsFree = takenBy.length === 0;
             console.log(`[DEBUG] Checking UTXO ${utxo.txHash.slice(0, 6)}...${utxo.txHash.slice(utxo.txHash.length - 6)} (${utxo.numberOfVOuts} vOuts) for ${utxo.balanceChange} with fee ${fee.toFixed()} (${timeBetweenBurnAndUTXO}) ${!txIsFree ? `(taken by #${takenBy[0].ref} - ${timeDifference(utxo.time - takenBy[0].timestamp)})` : ""}`);
 
+            const splitFee = (n: number) => Math.ceil(9399 / (n > 1 ? n - 1 : n)) + 1;
+
             const rightAmount = utxo.numberOfVOuts === undefined ?
-                (fee.isEqualTo(10601) || fee.isEqualTo(5301) || fee.isEqualTo(3535) || fee.isEqualTo(2651) || fee.isEqualTo(2121)) :
-                (fee.isEqualTo(Math.ceil(10600 / (utxo.numberOfVOuts - 1)) + 1));
+                (
+                    fee.isEqualTo(splitFee(1)) ||
+                    fee.isEqualTo(splitFee(2)) ||
+                    fee.isEqualTo(splitFee(3)) ||
+                    fee.isEqualTo(splitFee(4)) ||
+                    fee.isEqualTo(splitFee(5)) ||
+                    fee.isEqualTo(splitFee(6)) ||
+                    fee.isEqualTo(splitFee(7)) ||
+                    fee.isEqualTo(splitFee(8))
+                ) :
+                (fee.isEqualTo(splitFee(utxo.numberOfVOuts)) || fee.isEqualTo(splitFee(utxo.numberOfVOuts + 1)));
             if (
-                minutesBetweenBurnAndUTXO >= 0 && minutesBetweenBurnAndUTXO <= 50 &&
+                minutesBetweenBurnAndUTXO >= 0 &&
                 txTimestamp >= item.timestamp &&
                 rightAmount &&
                 txIsFree

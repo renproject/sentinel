@@ -20,7 +20,8 @@ export const getBTCTransactions = async (network: Network, token: Token, address
         throw new Error(`Unsupported network and token pair ${network}, ${token}`);
     }
 
-    const response = (await Axios.get<BlockChairAddress>(`https://api.blockchair.com/${url}/dashboards/address/${address}?transaction_details=true`)).data;
+    // TODO: Use pagination like ZEC to search until a timestamp.
+    const response = (await Axios.get<BlockChairAddress>(`https://api.blockchair.com/${url}/dashboards/address/${address}?transaction_details=true&limit=100,0`)).data;
     return List(response.data[address].transactions).map(utxo => ({
         txHash: `${utxo.hash}_${address}_${utxo.balance_change}`,
         time: (new Date(`${utxo.time} UTC`)).getTime() / 1000,
