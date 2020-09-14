@@ -11,7 +11,14 @@ import { timeAgo, timeDifference } from "./lib/naturalTime";
 import { reportError } from "./lib/sentry";
 import { Burn, Network, Token } from "./types/types";
 
-export const verifyBurn = async (contractReader: ContractReader, logger: Logger, database: Database, network: Network, token: Token, item: Burn) => {
+export const verifyBurn = async (
+    contractReader: ContractReader,
+    logger: Logger,
+    database: Database,
+    network: Network,
+    token: Token,
+    item: Burn,
+) => {
     if (!contractReader.sdk) {
         return;
     }
@@ -19,13 +26,20 @@ export const verifyBurn = async (contractReader: ContractReader, logger: Logger,
     console.log("");
 
     try {
-        const address = contractReader.sdk.utils[token].addressFrom(item.address);
+        const address = contractReader.sdk.utils[token].addressFrom(
+            item.address,
+        );
         const target = item.amount;
 
-        const diffMinutes = moment().diff(moment.unix(item.timestamp), "minutes");
+        const diffMinutes = moment().diff(
+            moment.unix(item.timestamp),
+            "minutes",
+        );
         const naturalDiff = timeAgo(item.timestamp);
 
-        logger.info(`[${network}][${token}] Checking ${address} received ${target.toFixed()} (${item.ref.toFixed()}) (${naturalDiff})`);
+        logger.info(
+            `[${network}][${token}] Checking ${address} received ${target.toFixed()} (${item.ref.toFixed()}) (${naturalDiff})`,
+        );
 
         if (target.lte(10000)) {
             item.received = true;
@@ -38,13 +52,24 @@ export const verifyBurn = async (contractReader: ContractReader, logger: Logger,
         const taken: string[] = [];
         // const past: string[] = [];
 
-        const transactions = token === Token.ZEC ?
-            await getZECTransactions(network, token, address, item.timestamp) :
-            await getBTCTransactions(network, token, address);
+        const transactions =
+            token === Token.ZEC
+                ? await getZECTransactions(
+                      network,
+                      token,
+                      address,
+                      item.timestamp,
+                  )
+                : await getBTCTransactions(network, token, address);
 
-        const sortedUtxos = transactions.sortBy(tx => (new Date(`${tx.time} UTC`)).getTime()).reverse();
+        const sortedUtxos = transactions
+            .sortBy(tx => new Date(`${tx.time} UTC`).getTime())
+            .reverse();
 
-        const adjust = (value: BigNumber | string): string => new BigNumber(value).div(new BigNumber(10).exponentiatedBy(8)).toFixed();
+        const adjust = (value: BigNumber | string): string =>
+            new BigNumber(value)
+                .div(new BigNumber(10).exponentiatedBy(8))
+                .toFixed();
 
         for (const utxo of sortedUtxos.valueSeq()) {
             const balanceChange = new BigNumber(utxo.balanceChange);
@@ -66,27 +91,51 @@ export const verifyBurn = async (contractReader: ContractReader, logger: Logger,
                 continue;
             }
 
-            const minutesBetweenBurnAndUTXO = moment.unix(utxo.time).diff(moment.unix(item.timestamp), "minutes");
-            const timeBetweenBurnAndUTXO = timeDifference(utxo.time - item.timestamp);
+            const minutesBetweenBurnAndUTXO = moment
+                .unix(utxo.time)
+                .diff(moment.unix(item.timestamp), "minutes");
+            const timeBetweenBurnAndUTXO = timeDifference(
+                utxo.time - item.timestamp,
+            );
 
-            const takenBy = await database.txIsFree(network, token, utxo.txHash);
+            const takenBy = await database.txIsFree(
+                network,
+                token,
+                utxo.txHash,
+            );
             const txIsFree = takenBy.length === 0;
-            console.log(`[DEBUG] Checking UTXO ${utxo.txHash.slice(0, 6)}...${utxo.txHash.slice(utxo.txHash.length - 6)} (${utxo.numberOfVOuts} vOuts) for ${utxo.balanceChange} with fee ${fee.toFixed()} (${timeBetweenBurnAndUTXO}) ${!txIsFree ? `(taken by #${takenBy[0].ref} - ${timeDifference(utxo.time - takenBy[0].timestamp)})` : ""}`);
+            console.log(
+                `[DEBUG] Checking UTXO ${utxo.txHash.slice(
+                    0,
+                    6,
+                )}...${utxo.txHash.slice(utxo.txHash.length - 6)} (${
+                    utxo.numberOfVOuts
+                } vOuts) for ${
+                    utxo.balanceChange
+                } with fee ${fee.toFixed()} (${timeBetweenBurnAndUTXO}) ${
+                    !txIsFree
+                        ? `(taken by #${takenBy[0].ref} - ${timeDifference(
+                              utxo.time - takenBy[0].timestamp,
+                          )})`
+                        : ""
+                }`,
+            );
 
-            const splitFee = (n: number) => Math.ceil(9399 / (n > 1 ? n - 1 : n)) + 1;
+            const splitFee = (n: number) =>
+                Math.ceil(9399 / (n > 1 ? n - 1 : n)) + 1;
 
-            const rightAmount = utxo.numberOfVOuts === undefined ?
-                (
-                    fee.isEqualTo(splitFee(1)) ||
-                    fee.isEqualTo(splitFee(2)) ||
-                    fee.isEqualTo(splitFee(3)) ||
-                    fee.isEqualTo(splitFee(4)) ||
-                    fee.isEqualTo(splitFee(5)) ||
-                    fee.isEqualTo(splitFee(6)) ||
-                    fee.isEqualTo(splitFee(7)) ||
-                    fee.isEqualTo(splitFee(8))
-                ) :
-                (fee.isEqualTo(splitFee(utxo.numberOfVOuts)) || fee.isEqualTo(splitFee(utxo.numberOfVOuts + 1)));
+            const rightAmount =
+                utxo.numberOfVOuts === undefined
+                    ? fee.isEqualTo(splitFee(1)) ||
+                      fee.isEqualTo(splitFee(2)) ||
+                      fee.isEqualTo(splitFee(3)) ||
+                      fee.isEqualTo(splitFee(4)) ||
+                      fee.isEqualTo(splitFee(5)) ||
+                      fee.isEqualTo(splitFee(6)) ||
+                      fee.isEqualTo(splitFee(7)) ||
+                      fee.isEqualTo(splitFee(8))
+                    : fee.isEqualTo(splitFee(utxo.numberOfVOuts)) ||
+                      fee.isEqualTo(splitFee(utxo.numberOfVOuts + 1));
             if (
                 minutesBetweenBurnAndUTXO >= 0 &&
                 txTimestamp >= item.timestamp &&
@@ -96,18 +145,38 @@ export const verifyBurn = async (contractReader: ContractReader, logger: Logger,
                 item.txHash = utxo.txHash;
                 item.received = true;
                 await database.updateBurn(item);
-                console.log(chalk.green(`[INFO] Found! ${utxo.balanceChange}. Fee is ${fee.toFixed()} (${timeBetweenBurnAndUTXO})`));
+                console.log(
+                    chalk.green(
+                        `[INFO] Found! ${
+                            utxo.balanceChange
+                        }. Fee is ${fee.toFixed()} (${timeBetweenBurnAndUTXO})`,
+                    ),
+                );
                 return;
-            } else if (txTimestamp >= item.timestamp && txIsFree && fee.gte(0)) {
-                fees.push(`${adjust(balanceChange)} (${timeBetweenBurnAndUTXO})`);
+            } else if (
+                txTimestamp >= item.timestamp &&
+                txIsFree &&
+                fee.gte(0)
+            ) {
+                fees.push(
+                    `${adjust(balanceChange)} (${timeBetweenBurnAndUTXO})`,
+                );
             } else if (txTimestamp >= item.timestamp && fee.gte(0)) {
-                taken.push(`${adjust(utxo.balanceChange.toFixed())} (${timeBetweenBurnAndUTXO})`);
+                taken.push(
+                    `${adjust(
+                        utxo.balanceChange.toFixed(),
+                    )} (${timeBetweenBurnAndUTXO})`,
+                );
                 // } else if (fee.gte(0)) {
                 //     past.push(`${adjust(utxo.balanceChange.toFixed())} (${timeBetweenBurnAndUTXO})`);
             }
         }
         if (!item.received) {
-            let errorMessage = `🔥🔥🔥 [burn-sentry] ${network.toLowerCase()} ${item.token} #${item.ref.toFixed()} (${naturalDiff}) - ${adjust(item.amount)} ${item.token} to ${address} - burn not found`;
+            let errorMessage = `🔥🔥🔥 [burn-sentry] ${network.toLowerCase()} ${
+                item.token
+            } #${item.ref.toFixed()} (${naturalDiff}) - ${adjust(
+                item.amount,
+            )} ${item.token} to ${address} - burn not found`;
             if (fees.length > 0) {
                 errorMessage += ` - Other utxos: ${fees.join(", ")}`;
             }
@@ -119,17 +188,16 @@ export const verifyBurn = async (contractReader: ContractReader, logger: Logger,
             // }
 
             if (diffMinutes > 10 && !item.sentried) {
-                if (reportError(
-                    errorMessage,
-                    {
+                if (
+                    reportError(errorMessage, {
                         network,
                         token,
                         ref: item.ref,
                         address,
                         timeAgo: naturalDiff,
                         amount: `${adjust(item.amount)} ${item.token}`,
-                    }
-                )) {
+                    })
+                ) {
                     item.sentried = true;
                     await database.updateBurn(item);
                 }

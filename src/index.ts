@@ -22,8 +22,12 @@ if (result.error) {
     console.error(result.error);
 }
 
-const tick = async (network: Network, contractReader: ContractReader, logger: Logger, database: Database) => {
-
+const tick = async (
+    network: Network,
+    contractReader: ContractReader,
+    logger: Logger,
+    database: Database,
+) => {
     if (!contractReader.sdk) {
         return;
     }
@@ -35,13 +39,21 @@ const tick = async (network: Network, contractReader: ContractReader, logger: Lo
     for (const token of tokens) {
         const previousBlock = await database.getLatestBlock(network, token);
 
-        const { burns, currentBlock } = await contractReader.getNewLogs(network, token, previousBlock);
+        const { burns, currentBlock } = await contractReader.getNewLogs(
+            network,
+            token,
+            previousBlock,
+        );
         // if (network === Network.Testnet && token === Token.ZEC) {
         //     await database.setLatestBlock(network, token, currentBlock);
         //     continue;
         // }
 
-        logger.info(`[${network}][${token}] Got ${burns.length} burns from block #${previousBlock.toString()} until block #${currentBlock.toString()}`);
+        logger.info(
+            `[${network}][${token}] Got ${
+                burns.length
+            } burns from block #${previousBlock.toString()} until block #${currentBlock.toString()}`,
+        );
 
         for (const burn of burns) {
             await database.updateBurn(burn);
@@ -50,24 +62,36 @@ const tick = async (network: Network, contractReader: ContractReader, logger: Lo
     }
 
     for (const token of tokens) {
-        const items = List(await database.getBurns(network, token, true)).sortBy(i => i.ref.toNumber());
+        const items = List(
+            await database.getBurns(network, token, true),
+        ).sortBy(i => i.ref.toNumber());
         console.log("\n");
         logger.info(`[${network}][${token}] ${items.size} burns to check...`);
         for (const item of items.values()) {
-            await verifyBurn(contractReader, logger, database, network, token, item);
+            await verifyBurn(
+                contractReader,
+                logger,
+                database,
+                network,
+                token,
+                item,
+            );
         }
     }
 };
 
 export const main = async (_args: readonly string[]) => {
-
     // Set up sentry
     Sentry.init({
         dsn: process.env.SENTRY_DSN,
         integrations: ((integrations: Array<{ name: string }>) => {
             // integrations will be all default integrations
-            return integrations.filter((integration) => {
-                return integration.name !== "OnUncaughtException" && integration.name !== "OnUnhandledRejection" && integration.name !== "Http";
+            return integrations.filter(integration => {
+                return (
+                    integration.name !== "OnUncaughtException" &&
+                    integration.name !== "OnUnhandledRejection" &&
+                    integration.name !== "Http"
+                );
             });
         }) as any, // tslint:disable-line: no-any
     });
@@ -90,8 +114,13 @@ export const main = async (_args: readonly string[]) => {
             try {
                 let contractReader = contractReaders.get(network);
                 if (!contractReader) {
-                    contractReader = await new ContractReader(logger).connect(network);
-                    contractReaders = contractReaders.set(network, contractReader);
+                    contractReader = await new ContractReader(logger).connect(
+                        network,
+                    );
+                    contractReaders = contractReaders.set(
+                        network,
+                        contractReader,
+                    );
                 }
                 await tick(network, contractReader, logger, database);
             } catch (error) {

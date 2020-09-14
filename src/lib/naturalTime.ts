@@ -20,11 +20,11 @@ const naturalTime = (
         countDown: boolean;
         showingSeconds?: boolean;
         abbreviate?: boolean;
-    }
+    },
 ): string => {
-    const diff = options.countDown ?
-        moment.duration(moment.unix(expiry).diff(moment())) :
-        moment.duration(moment().diff(moment.unix(expiry)));
+    const diff = options.countDown
+        ? moment.duration(moment.unix(expiry).diff(moment()))
+        : moment.duration(moment().diff(moment.unix(expiry)));
     let days = diff.asDays();
     let hours = diff.asHours();
     let minutes = diff.asMinutes();
@@ -32,7 +32,6 @@ const naturalTime = (
 
     const suffix = options.suffix ? ` ${options.suffix}` : "";
     const prefix = options.prefix ? `${options.prefix} ` : "";
-
 
     if (days > 2) {
         days = Math.round(days);
@@ -45,15 +44,23 @@ const naturalTime = (
     } else if (minutes >= 1) {
         minutes = Math.round(minutes);
         if (options.abbreviate) {
-            return `${prefix}${minutes} ${minutes === 1 ? "min" : "mins"}${suffix}`;
+            return `${prefix}${minutes} ${
+                minutes === 1 ? "min" : "mins"
+            }${suffix}`;
         }
-        return `${prefix}${minutes} ${minutes === 1 ? "minute" : "minutes"}${suffix}`;
+        return `${prefix}${minutes} ${
+            minutes === 1 ? "minute" : "minutes"
+        }${suffix}`;
     } else if (options.showingSeconds && seconds >= 1) {
         seconds = Math.floor(seconds);
         if (options.abbreviate) {
-            return `${prefix}${seconds} ${seconds === 1 ? "sec" : "secs"}${suffix}`;
+            return `${prefix}${seconds} ${
+                seconds === 1 ? "sec" : "secs"
+            }${suffix}`;
         }
-        return `${prefix}${seconds} ${seconds === 1 ? "second" : "seconds"}${suffix}`;
+        return `${prefix}${seconds} ${
+            seconds === 1 ? "second" : "seconds"
+        }${suffix}`;
     } else {
         return `${options.message}`;
     }
@@ -75,7 +82,7 @@ export const timeDifference = (unixDifference: number) => {
             countDown: false,
         });
     } else {
-        return naturalTime(moment().unix() - (-unixDifference), {
+        return naturalTime(moment().unix() - -unixDifference, {
             message: "At the same time",
             suffix: "before",
             countDown: false,

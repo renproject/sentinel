@@ -36,8 +36,7 @@ export class Database {
             CREATE TABLE IF NOT EXISTS synced (
                 network CHAR(30) UNIQUE NOT NULL,
                 block DECIMAL NOT NULL
-            );`
-        );
+            );`);
 
         for (const network of networks) {
             const tokens = networkTokens.get(network);
@@ -46,10 +45,18 @@ export class Database {
             }
             for (const token of tokens) {
                 if (drop) {
-                    await this.client.query(`DROP TABLE BURNS_${this.networkTokenID(network, token)};`);
+                    await this.client.query(
+                        `DROP TABLE BURNS_${this.networkTokenID(
+                            network,
+                            token,
+                        )};`,
+                    );
                 }
                 await this.client.query(`
-                    CREATE TABLE IF NOT EXISTS BURNS_${this.networkTokenID(network, token)} (
+                    CREATE TABLE IF NOT EXISTS BURNS_${this.networkTokenID(
+                        network,
+                        token,
+                    )} (
                         ref DECIMAL UNIQUE NOT NULL,
                         amount DECIMAL NOT NULL,
                         address CHAR(200) NOT NULL,
@@ -58,8 +65,7 @@ export class Database {
                         timestamp DECIMAL NOT NULL,
                         sentried BOOLEAN NOT NULL,
                         ignored BOOLEAN NOT NULL
-                    );`,
-                );
+                    );`);
                 // await this.client.query(`
                 //     ALTER TABLE BURNS_${this.networkTokenID(network, token)}
                 //     ADD COLUMN ignored BOOLEAN NOT NULL DEFAULT false;
@@ -68,19 +74,29 @@ export class Database {
         }
     };
 
-    public getLatestBlock = async (network: Network, token: Token): Promise<BigNumber> => {
+    public getLatestBlock = async (
+        network: Network,
+        token: Token,
+    ): Promise<BigNumber> => {
         if (!this.client) {
             throw new Error(`No client setup, please call 'connect'`);
         }
 
-        const results = await this.client.query(`SELECT * FROM synced WHERE network=$1;`, [this.networkTokenID(network, token)]);
+        const results = await this.client.query(
+            `SELECT * FROM synced WHERE network=$1;`,
+            [this.networkTokenID(network, token)],
+        );
         if (results.length) {
             return new BigNumber(results[0].block || "0");
         }
         return new BigNumber(0);
-    }
+    };
 
-    public setLatestBlock = async (network: Network, token: Token, latestBlock: BigNumber): Promise<void> => {
+    public setLatestBlock = async (
+        network: Network,
+        token: Token,
+        latestBlock: BigNumber,
+    ): Promise<void> => {
         if (!this.client) {
             throw new Error(`No client setup, please call 'connect'`);
         }
@@ -91,16 +107,23 @@ export class Database {
                 block = $2
                 ;`,
 
-            [
-                this.networkTokenID(network, token),
-                latestBlock.toFixed(),
-            ],
+            [this.networkTokenID(network, token), latestBlock.toFixed()],
         );
-    }
+    };
 
-    public networkTokenID = (network: Network, token: Token): string => `${network}_${token}`;
+    public networkTokenID = (network: Network, token: Token): string =>
+        `${network}_${token}`;
 
-    public unmarshalRow = (network: Network, token: Token) => (row: { ref: number, amount: string, address: string, received: boolean, txhash: string, timestamp: number, sentried: boolean, ignored: boolean }) => {
+    public unmarshalRow = (network: Network, token: Token) => (row: {
+        ref: number;
+        amount: string;
+        address: string;
+        received: boolean;
+        txhash: string;
+        timestamp: number;
+        sentried: boolean;
+        ignored: boolean;
+    }) => {
         const ret: Burn = {
             ref: new BigNumber(row.ref),
             network,
@@ -114,27 +137,45 @@ export class Database {
             ignored: row.ignored,
         };
         return ret;
-    }
+    };
 
-    public getBurns = async (network: Network, token: Token, onlyNotReceived: boolean): Promise<readonly Burn[]> => {
+    public getBurns = async (
+        network: Network,
+        token: Token,
+        onlyNotReceived: boolean,
+    ): Promise<readonly Burn[]> => {
         if (!this.client) {
             throw new Error(`No client setup, please call 'connect'`);
         }
 
-        const query = await this.client.query(onlyNotReceived ?
-            `SELECT * FROM BURNS_${this.networkTokenID(network, token)} WHERE received=false AND ignored=false;` :
-            `SELECT * FROM BURNS_${this.networkTokenID(network, token)};`
+        const query = await this.client.query(
+            onlyNotReceived
+                ? `SELECT * FROM BURNS_${this.networkTokenID(
+                      network,
+                      token,
+                  )} WHERE received=false AND ignored=false;`
+                : `SELECT * FROM BURNS_${this.networkTokenID(network, token)};`,
         );
 
         return query.map(this.unmarshalRow(network, token));
     };
 
-    public getBurn = async (network: Network, token: Token, burnRef: number): Promise<Burn | undefined> => {
+    public getBurn = async (
+        network: Network,
+        token: Token,
+        burnRef: number,
+    ): Promise<Burn | undefined> => {
         if (!this.client) {
             throw new Error(`No client setup, please call 'connect'`);
         }
 
-        const query = await this.client.query(`SELECT * FROM BURNS_${this.networkTokenID(network, token)} WHERE ref=$1;`, [burnRef]);
+        const query = await this.client.query(
+            `SELECT * FROM BURNS_${this.networkTokenID(
+                network,
+                token,
+            )} WHERE ref=$1;`,
+            [burnRef],
+        );
         const burns = query.map(this.unmarshalRow(network, token));
         return burns.length === 0 ? undefined : burns[0];
     };
@@ -145,7 +186,10 @@ export class Database {
         }
 
         await this.client.query(
-            `INSERT INTO BURNS_${this.networkTokenID(trade.network, trade.token)} VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (ref) DO UPDATE
+            `INSERT INTO BURNS_${this.networkTokenID(
+                trade.network,
+                trade.token,
+            )} VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (ref) DO UPDATE
                 SET 
                 amount = $2,
                 address = $3,
@@ -169,12 +213,22 @@ export class Database {
         );
     };
 
-    public txIsFree = async (network: Network, token: Token, txHash: string): Promise<readonly Burn[]> => {
+    public txIsFree = async (
+        network: Network,
+        token: Token,
+        txHash: string,
+    ): Promise<readonly Burn[]> => {
         if (!this.client) {
             throw new Error(`No client setup, please call 'connect'`);
         }
 
-        const query = await this.client.query(`SELECT * FROM BURNS_${this.networkTokenID(network, token)} WHERE received=true AND txhash=$1;`, [txHash]);
+        const query = await this.client.query(
+            `SELECT * FROM BURNS_${this.networkTokenID(
+                network,
+                token,
+            )} WHERE received=true AND txhash=$1;`,
+            [txHash],
+        );
         return query.map(this.unmarshalRow(network, token));
     };
 }

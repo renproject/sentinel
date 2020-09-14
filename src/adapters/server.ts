@@ -11,10 +11,7 @@ app.use(cors());
 
 const port = process.env.PORT || 3000;
 
-export const setupApp = (
-    database: Database,
-    logger: Logger,
-) => {
+export const setupApp = (database: Database, logger: Logger) => {
     app.get("/", async (_req, res) => {
         console.log(`Handling '/'`);
 
@@ -28,7 +25,11 @@ export const setupApp = (
                 continue;
             }
             for (const token of tokens) {
-                const burns = List(await database.getBurns(network, token, true)).sortBy(burn => burn.ref).toArray();
+                const burns = List(
+                    await database.getBurns(network, token, true),
+                )
+                    .sortBy(burn => burn.ref)
+                    .toArray();
                 json[network.toLowerCase()][token.toLowerCase()] = burns;
             }
         }

@@ -76,4 +76,3 @@ export interface BlockChairAddress {
     data: Data;
     context: Context;
 }
-

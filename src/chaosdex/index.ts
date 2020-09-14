@@ -29,7 +29,9 @@ export class ContractReader {
         // this.logger = logger;
     }
 
-    public readonly connect = async (network: Network): Promise<ContractReader> => {
+    public readonly connect = async (
+        network: Network,
+    ): Promise<ContractReader> => {
         this.sdk = new RenJS(network.toLowerCase());
         this.web3 = getWeb3(this.sdk.network.isTestnet ? "kovan" : "mainnet");
         return this;
@@ -84,16 +86,23 @@ export class ContractReader {
                         return "0x112dBA369B25cebbb739d7576F6E4aC2b582448A";
                 }
         }
-        throw new Error(`Unknown network (${network}) and token (${token}) combination.`);
-    }
+        throw new Error(
+            `Unknown network (${network}) and token (${token}) combination.`,
+        );
+    };
 
-    public readonly getNewLogs = async (network: Network, token: Token, blockNumber: BigNumber | string) => {
-
+    public readonly getNewLogs = async (
+        network: Network,
+        token: Token,
+        blockNumber: BigNumber | string,
+    ) => {
         if (!this.web3) {
             throw new Error("Web3 not defined");
         }
 
-        const currentBlock = new BigNumber((await this.web3.eth.getBlockNumber())).minus(1);
+        const currentBlock = new BigNumber(
+            await this.web3.eth.getBlockNumber(),
+        ).minus(1);
 
         const events = await this.web3.eth.getPastLogs({
             address: this.getShifter(network, token),
@@ -102,7 +111,9 @@ export class ContractReader {
             topics: [sha3("LogShiftOut(bytes,uint256,uint256,bytes)")],
         });
         if (events.length > 0) {
-            console.log(`[${network}][${token}] Got ${events.length} events. Getting timestamps...`);
+            console.log(
+                `[${network}][${token}] Got ${events.length} events. Getting timestamps...`,
+            );
         }
 
         // const events = [{
@@ -126,14 +137,21 @@ export class ContractReader {
                 throw new Error("Web3 not defined");
             }
 
-            const decoded = this.web3.eth.abi.decodeParameters(["bytes", "uint256"], event.data);
+            const decoded = this.web3.eth.abi.decodeParameters(
+                ["bytes", "uint256"],
+                event.data,
+            );
 
             if (i > 0 && i % 50 === 0) {
-                console.log(`[${network}][${token}] Got timestamp ${i}/${events.length}...`);
+                console.log(
+                    `[${network}][${token}] Got timestamp ${i}/${events.length}...`,
+                );
             }
 
             const blocknumber = event.blockNumber;
-            const timestamp = new BigNumber((await this.web3.eth.getBlock(blocknumber)).timestamp).toNumber();
+            const timestamp = new BigNumber(
+                (await this.web3.eth.getBlock(blocknumber)).timestamp,
+            ).toNumber();
 
             const burn: Burn = {
                 ref: new BigNumber(event.topics[1] as string, 16),
@@ -152,5 +170,5 @@ export class ContractReader {
         }
 
         return { burns, currentBlock };
-    }
+    };
 }
