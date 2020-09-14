@@ -6,6 +6,8 @@ import { Burn, Network, networks, networkTokens, Token } from "../types/types";
 
 const pgp = PGP();
 
+export const NETWORK_PREFIX = "SUBZERO_";
+
 export class Database {
     public connectionString = process.env.DATABASE_URL;
     private client: PGP.IDatabase<{}, pg.IClient> | undefined;
@@ -112,7 +114,7 @@ export class Database {
     };
 
     public networkTokenID = (network: Network, token: Token): string =>
-        `${network}_${token}`;
+        `${NETWORK_PREFIX}${network}_${token}`;
 
     public unmarshalRow = (network: Network, token: Token) => (row: {
         ref: number;
@@ -142,19 +144,24 @@ export class Database {
     public getBurns = async (
         network: Network,
         token: Token,
-        onlyNotReceived: boolean,
+        // onlyNotReceived: boolean,
+        onlyNotSentried = false,
     ): Promise<readonly Burn[]> => {
         if (!this.client) {
             throw new Error(`No client setup, please call 'connect'`);
         }
 
         const query = await this.client.query(
-            onlyNotReceived
+            onlyNotSentried
                 ? `SELECT * FROM BURNS_${this.networkTokenID(
                       network,
                       token,
-                  )} WHERE received=false AND ignored=false;`
-                : `SELECT * FROM BURNS_${this.networkTokenID(network, token)};`,
+                  )} WHERE received=false AND ignored=false AND sentried=false;`
+                : // : `SELECT * FROM BURNS_${this.networkTokenID(network, token)};`,
+                  `SELECT * FROM BURNS_${this.networkTokenID(
+                      network,
+                      token,
+                  )} WHERE received=false AND ignored=false;`,
         );
 
         return query.map(this.unmarshalRow(network, token));

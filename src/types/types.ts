@@ -2,11 +2,15 @@ import BigNumber from "bignumber.js";
 import { Map } from "immutable";
 
 export enum Network {
+    Mainnet = "MAINNET",
+
     Chaosnet = "CHAOSNET",
     Testnet = "TESTNET",
     Devnet = "DEVNET",
 }
-export const networks = [Network.Chaosnet, Network.Testnet];
+
+export const networks = [Network.Mainnet];
+// export const networks = [Network.Chaosnet, Network.Testnet];
 
 export enum Token {
     BTC = "BTC",
@@ -14,10 +18,12 @@ export enum Token {
     BCH = "BCH",
 }
 
-export const networkTokens = Map<Network, Token[]>()
-    .set(Network.Chaosnet, [Token.BTC, Token.ZEC, Token.BCH])
-    .set(Network.Testnet, [Token.BTC, Token.ZEC])
-    .set(Network.Devnet, [Token.BTC]);
+export const networkTokens = Map<Network, Token[]>().set(Network.Mainnet, [
+    Token.BTC,
+]);
+// .set(Network.Chaosnet, [Token.BTC, Token.ZEC, Token.BCH])
+// .set(Network.Testnet, [Token.BTC, Token.ZEC])
+// .set(Network.Devnet, [Token.BTC])
 
 export const TokenDecimals = Map<Token, number>()
     .set(Token.BTC, 8)

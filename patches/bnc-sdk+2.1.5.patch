@@ -1,0 +1,13 @@
+diff --git a/node_modules/bnc-sdk/dist/types/src/interfaces.d.ts b/node_modules/bnc-sdk/dist/types/src/interfaces.d.ts
+index 7e1f24e..d3b10f7 100644
+--- a/node_modules/bnc-sdk/dist/types/src/interfaces.d.ts
++++ b/node_modules/bnc-sdk/dist/types/src/interfaces.d.ts
+@@ -55,7 +55,7 @@ export interface InitializationOptions {
+     apiUrl?: string;
+     ws?: any;
+     onopen?: () => void;
+-    ondown?: (closeEvent: CloseEvent) => void;
++    ondown?: (closeEvent: any) => void;
+     onreopen?: () => void;
+     onerror?: (error: SDKError) => void;
+     onclose?: () => void;

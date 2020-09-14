@@ -19,7 +19,7 @@ export const getZECTransactions = async (
 
     let ret = List<StdTransaction>();
 
-    if (network === Network.Chaosnet) {
+    if (network === Network.Chaosnet || network === Network.Mainnet) {
         const limit = 20;
         const URL = (offset: number) =>
             `https://api.zcha.in/v2/mainnet/accounts/${address}/recv?sort=value&direction=ascending&limit=${limit}&offset=${offset}`;
@@ -54,6 +54,7 @@ export const getZECTransactions = async (
                         time: utxo.timestamp,
                         balanceChange: vout.valueZat,
                         numberOfVOuts: utxo.vout.length,
+                        numberOfVIns: utxo.vin.length,
                     });
                 }
             }
@@ -95,6 +96,7 @@ export const getZECTransactions = async (
                             .times(new BigNumber(10).exponentiatedBy(8))
                             .toNumber(),
                         numberOfVOuts: utxo.vout.length,
+                        numberOfVIns: utxo.vin.length,
                     });
                 }
             }

@@ -25,10 +25,8 @@ export const setupApp = (database: Database, logger: Logger) => {
                 continue;
             }
             for (const token of tokens) {
-                const burns = List(
-                    await database.getBurns(network, token, true),
-                )
-                    .sortBy(burn => burn.ref)
+                const burns = List(await database.getBurns(network, token))
+                    .sortBy((burn) => burn.ref)
                     .toArray();
                 json[network.toLowerCase()][token.toLowerCase()] = burns;
             }
