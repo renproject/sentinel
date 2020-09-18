@@ -1,1 +1,1 @@
-export { ContractReader, submitBurn } from "./subzero";
+export { ContractReader } from "./subzero";
