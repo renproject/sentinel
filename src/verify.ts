@@ -245,6 +245,12 @@ export const verifyBurn = async (
             }
         }
         if (!item.received) {
+            // Try submit
+            console.log(`Submitting ${item.token} burn ${item.ref.toFixed()}`);
+            contractReader
+                .submitBurn(item.token, item.ref.toNumber())
+                .catch(console.error);
+
             let errorMessage = `🔥🔥🔥 [burn-sentry] ${network.toLowerCase()} ${
                 item.token
             } #${item.ref.toFixed()} (${naturalDiff}) - ${adjust(

@@ -97,12 +97,12 @@ export class ContractReader {
             await this.web3.eth.getBlockNumber(),
         ).minus(1);
 
-        const events = (await this.web3.eth.getPastLogs({
+        const events = await this.web3.eth.getPastLogs({
             address: this.getShifter(network, token),
             fromBlock: blockNumber.toString(),
             toBlock: currentBlock.toString(),
             topics: [sha3("LogBurn(bytes,uint256,uint256,bytes)")],
-        }));
+        });
         if (events.length > 0) {
             console.log(
                 `[${network}][${token}] Got ${events.length} events. Getting timestamps...`,
@@ -163,5 +163,23 @@ export class ContractReader {
         }
 
         return { burns, currentBlock };
+    };
+
+    // Submit burn to RenVM.
+    submitBurn = async (
+        sendToken: "BTC" | "ZEC" | "BCH",
+        burnReference: number,
+    ): Promise<void> => {
+        if (!this.web3) {
+            throw new Error("Web3 not defined");
+        }
+
+        await new RenJS()
+            .burnAndRelease({
+                web3Provider: this.web3.currentProvider,
+                sendToken,
+                burnReference,
+            })
+            .submit();
     };
 }
