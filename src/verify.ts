@@ -108,6 +108,22 @@ export const verifyBurn = async (
             .sortBy((tx) => new Date(`${tx.time} UTC`).getTime())
             .reverse();
 
+        const networkFees = (await contractReader.sdk.getFees())[
+            token.toLowerCase() as "btc" | "zec" | "bch"
+        ];
+        if (networkFees && target.lt(networkFees.release + 547)) {
+            item.ignored = true;
+            await database.updateBurn(item);
+            console.log(
+                chalk.yellow(
+                    `[WARNING] Burn of ${target.toFixed()} is less than minimum: ${
+                        networkFees.release + 547
+                    }`,
+                ),
+            );
+            return;
+        }
+
         for (const utxo of sortedUtxos.valueSeq()) {
             const balanceChange = new BigNumber(utxo.balanceChange);
             // A transaction out, not in
@@ -208,26 +224,6 @@ export const verifyBurn = async (
                             `[INFO] Found! ${
                                 utxo.balanceChange
                             }. Fee is ${fee.toFixed()} (${timeBetweenBurnAndUTXO})`,
-                        ),
-                    );
-                    return;
-                }
-
-                const networkFees = (await contractReader.sdk.getFees())[
-                    token.toLowerCase() as "btc" | "zec" | "bch"
-                ];
-                console.log("target", target);
-                console.log("token", token);
-                console.log("networkFees", networkFees);
-                console.log("networkFees.release", networkFees.release);
-                if (networkFees && target.lt(networkFees.release + 547)) {
-                    item.ignored = true;
-                    await database.updateBurn(item);
-                    console.log(
-                        chalk.yellow(
-                            `[WARNING] Burn of ${target.toFixed()} is less than minimum: ${
-                                networkFees.release + 547
-                            }`,
                         ),
                     );
                     return;
