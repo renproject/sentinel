@@ -216,6 +216,10 @@ export const verifyBurn = async (
                 const networkFees = (await contractReader.sdk.getFees())[
                     token.toLowerCase() as "btc" | "zec" | "bch"
                 ];
+                console.log("target", target);
+                console.log("token", token);
+                console.log("networkFees", networkFees);
+                console.log("networkFees.release", networkFees.release);
                 if (networkFees && target.lt(networkFees.release + 547)) {
                     item.ignored = true;
                     await database.updateBurn(item);
