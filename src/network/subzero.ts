@@ -174,12 +174,20 @@ export class ContractReader {
             throw new Error("Web3 not defined");
         }
 
+        let renVMHash = "";
         await new RenJS()
             .burnAndRelease({
                 web3Provider: this.web3.currentProvider,
                 sendToken,
                 burnReference,
             })
-            .submit();
+            .submit()
+            .on("txHash", (txHash) => {
+                console.log("txHash:", txHash);
+                renVMHash = txHash;
+            })
+            .on("status", (status) =>
+                console.log(`[${renVMHash}] status:`, status),
+            );
     };
 }

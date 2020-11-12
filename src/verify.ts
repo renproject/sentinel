@@ -245,7 +245,7 @@ export const verifyBurn = async (
             }
         }
         if (!item.received) {
-            // Try submit
+            // Try submitting to RenVM once every 10 minutes.
             if (Math.floor(diffMinutes) % 10 === 0) {
                 console.log(
                     `Submitting ${item.token} burn ${item.ref.toFixed()}`,
