@@ -108,7 +108,9 @@ export class ContractReader {
             address: this.getShifter(network, token),
             fromBlock: blockNumber.toString(),
             toBlock: currentBlock.toString(),
-            topics: [sha3("LogShiftOut(bytes,uint256,uint256,bytes)")],
+            topics: [
+                sha3("LogShiftOut(bytes,uint256,uint256,bytes)") as string,
+            ],
         });
         if (events.length > 0) {
             console.log(
