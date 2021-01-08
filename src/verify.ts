@@ -191,23 +191,23 @@ export const verifyBurn = async (
                 //         : fee.isEqualTo(splitFee(utxo.numberOfVOuts)) ||
                 //           fee.isEqualTo(splitFee(utxo.numberOfVOuts + 1));
 
-                const rightAmount = utxo.numberOfVOuts
-                    ? utxo.numberOfVOuts >= 2 &&
-                      utxo.fee &&
-                      fee.isEqualTo(
-                          utxo.fee /
-                              Math.max(
-                                  1,
-                                  utxo.numberOfVOuts -
-                                      1 +
-                                      ((utxo.numberOfVIns || 1) - 1),
-                              ),
-                      )
-                    : fee.isEqualTo(70000) ||
-                      fee.isEqualTo(35000) ||
-                      fee.isEqualTo(5000) ||
-                      fee.isEqualTo(16000) ||
-                      fee.isEqualTo(30000);
+                const rightAmount =
+                    utxo.numberOfVOuts && utxo.fee
+                        ? fee.isEqualTo(
+                              utxo.fee /
+                                  Math.max(
+                                      1,
+                                      utxo.numberOfVOuts -
+                                          1 +
+                                          ((utxo.numberOfVIns || 1) - 1),
+                                  ),
+                          )
+                        : fee.isEqualTo(70000) ||
+                          fee.isEqualTo(100000) ||
+                          fee.isEqualTo(35000) ||
+                          fee.isEqualTo(5000) ||
+                          fee.isEqualTo(16000) ||
+                          fee.isEqualTo(30000);
 
                 if (
                     minutesBetweenBurnAndUTXO >= 0 &&

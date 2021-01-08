@@ -22,20 +22,21 @@ export const getZECTransactions = async (
     if (network === Network.Chaosnet || network === Network.Mainnet) {
         const limit = 20;
         const URL = (offset: number) =>
-            `https://api.zcha.in/v2/mainnet/accounts/${address}/recv?sort=value&direction=ascending&limit=${limit}&offset=${offset}`;
+            `https://api.zcha.in/v2/mainnet/accounts/${address}/recv?sort=timestamp&direction=descending&limit=${limit}&offset=${offset}`;
 
         let utxos: ZChainAddress = [];
 
         let currentOffset = 0;
-        while (currentOffset < 40) {
+        while (currentOffset < 400) {
             const response = (
                 await Axios.get<ZChainAddress>(URL(currentOffset))
             ).data;
             utxos = utxos.concat(response);
+
             if (
                 response.length < limit ||
                 (response[response.length - 1] &&
-                    response[response.length - 1].time < untilTime)
+                    response[response.length - 1].timestamp < untilTime)
             ) {
                 break;
             }
@@ -67,7 +68,7 @@ export const getZECTransactions = async (
         let utxos: Item[] = [];
 
         let currentOffset = 0;
-        while (currentOffset < 1000) {
+        while (currentOffset < 10000) {
             const response = (
                 await Axios.get<ZecInsightAddress>(URL(currentOffset))
             ).data.items;

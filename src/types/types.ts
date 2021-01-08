@@ -20,6 +20,8 @@ export enum Token {
 
 export const networkTokens = Map<Network, Token[]>().set(Network.Mainnet, [
     Token.BTC,
+    Token.ZEC,
+    Token.BCH,
 ]);
 // .set(Network.Chaosnet, [Token.BTC, Token.ZEC, Token.BCH])
 // .set(Network.Testnet, [Token.BTC, Token.ZEC])
