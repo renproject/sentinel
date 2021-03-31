@@ -3,12 +3,13 @@ import chalk from "chalk";
 import moment from "moment";
 import { Logger } from "winston";
 
+import { strip0x } from "@renproject/utils";
 import { Database } from "./adapters/database";
 import { getBCHTransactions, getBTCTransactions } from "./apis/btc";
 import { getZECTransactions } from "./apis/zec";
 import { timeAgo, timeDifference } from "./lib/naturalTime";
 import { reportError } from "./lib/sentry";
-import { ContractReader } from "./network";
+import { ContractReader } from "./network/subzero";
 import { Burn, Network, Token } from "./types/types";
 
 const adjust = (value: BigNumber | string): string =>
@@ -22,16 +23,14 @@ export const verifyBurn = async (
     token: Token,
     item: Burn,
 ) => {
-    if (!contractReader.sdk) {
+    if (!contractReader.network) {
         return;
     }
 
     console.log("");
 
     try {
-        const address = contractReader.sdk.utils[token].addressFrom(
-            item.address,
-        );
+        const address = Buffer.from(strip0x(item.address), "hex").toString();
 
         const target = item.amount;
 
@@ -43,11 +42,11 @@ export const verifyBurn = async (
 
         // Invalid burn address
         if (
-            [Token.BTC, Token.ZEC, Token.BCH].indexOf(token) >= 0 &&
+            ["BTC", "ZEC", "BCH"].indexOf(token.symbol) >= 0 &&
             address.slice(0, 2) === "0x"
         ) {
-            const errorMessage = `🔥🔥🔥 [burn-sentry] ${network.toLowerCase()} ${
-                item.token
+            const errorMessage = `🔥🔥🔥 [burn-sentry] ${network.name.toLowerCase()} ${
+                item.token.symbol
             } #${item.ref.toFixed()} (${naturalDiff}) - Invalid burn recipient "${Buffer.from(
                 address.slice(2),
                 "hex",
@@ -60,20 +59,29 @@ export const verifyBurn = async (
                         ref: item.ref,
                         address,
                         timeAgo: naturalDiff,
-                        amount: `${adjust(item.amount)} ${item.token}`,
+                        amount: `${adjust(item.amount)} ${item.token.symbol}`,
                     })
                 ) {
                     item.sentried = true;
+                    item.ignored = true;
                     await database.updateBurn(item);
                 }
             } else {
                 console.log(chalk.yellow(`[WARNING] ${errorMessage}`));
+                item.ignored = true;
+                await database.updateBurn(item);
             }
             return;
         }
 
         logger.info(
-            `[${network}][${token}] Checking ${address} received ${target.toFixed()} (${item.ref.toFixed()}) (${naturalDiff})`,
+            `[${network.name}][${
+                token.symbol
+            }] Checking ${address} received ${target
+                .div(new BigNumber(10).exponentiatedBy(8))
+                .toFixed()} ${
+                token.symbol
+            } (${item.ref.toFixed()}) (${naturalDiff})`,
         );
 
         if (target.lte(10000)) {
@@ -88,14 +96,14 @@ export const verifyBurn = async (
         // const past: string[] = [];
 
         const transactions =
-            token === Token.ZEC
+            token.symbol === "ZEC"
                 ? await getZECTransactions(
                       network,
                       token,
                       address,
                       item.timestamp,
                   )
-                : token === Token.BCH
+                : token.symbol === "BCH"
                 ? await getBCHTransactions(network, token, address)
                 : await getBTCTransactions(
                       network,
@@ -108,17 +116,15 @@ export const verifyBurn = async (
             .sortBy((tx) => new Date(`${tx.time} UTC`).getTime())
             .reverse();
 
-        const networkFees = (await contractReader.sdk.getFees())[
-            token.toLowerCase() as "btc" | "zec" | "bch"
-        ];
-        if (networkFees && target.lt(networkFees.release + 547)) {
+        const networkFees = await contractReader.getReleaseFees(token);
+        if (networkFees && target.lt(networkFees.plus(547))) {
             item.ignored = true;
             await database.updateBurn(item);
             console.log(
                 chalk.yellow(
-                    `[WARNING] Burn of ${target.toFixed()} is less than minimum: ${
-                        networkFees.release + 547
-                    }`,
+                    `[WARNING] Burn of ${target.toFixed()} is less than minimum: ${networkFees.plus(
+                        547,
+                    )}`,
                 ),
             );
             return;
@@ -192,7 +198,10 @@ export const verifyBurn = async (
                 //           fee.isEqualTo(splitFee(utxo.numberOfVOuts + 1));
 
                 const rightAmount =
-                    utxo.numberOfVOuts && utxo.fee
+                    network.name.slice(0, 3) === "BSC"
+                        ? fee.isLessThan(150000)
+                        : //   minutesBetweenBurnAndUTXO <= 60
+                        utxo.numberOfVOuts && utxo.fee
                         ? fee.isEqualTo(
                               utxo.fee /
                                   Math.max(
@@ -246,20 +255,27 @@ export const verifyBurn = async (
         }
         if (!item.received) {
             // Try submitting to RenVM once every 10 minutes.
-            if (Math.floor(diffMinutes) % 10 === 0) {
+            if (true || Math.floor(diffMinutes) % 10 === 0) {
                 console.log(
                     `Submitting ${item.token} burn ${item.ref.toFixed()}`,
                 );
+                console.log("item.burnHash !!!", item.burnHash);
                 contractReader
-                    .submitBurn(item.token, item.ref.toNumber())
+                    .submitBurn(
+                        item.token,
+                        item.ref.toNumber(),
+                        network.name.slice(0, 3) === "BSC"
+                            ? item.burnHash || undefined
+                            : undefined,
+                    )
                     .catch(console.error);
             }
 
-            let errorMessage = `🔥🔥🔥 [burn-sentry] ${network.toLowerCase()} ${
-                item.token
+            let errorMessage = `🔥🔥🔥 [burn-sentry] ${network.name.toLowerCase()} ${
+                item.token.symbol
             } #${item.ref.toFixed()} (${naturalDiff}) - ${adjust(
                 item.amount,
-            )} ${item.token} to ${address} - burn not found`;
+            )} ${item.token.symbol} to ${address} - burn not found`;
             if (fees.length > 0) {
                 errorMessage += ` - Other utxos: ${fees.join(", ")}`;
             }
@@ -274,12 +290,12 @@ export const verifyBurn = async (
             if (diffMinutes > 90 && !item.sentried) {
                 if (
                     reportError(errorMessage, {
-                        network,
+                        network: network.name,
                         token,
                         ref: item.ref,
                         address,
                         timeAgo: naturalDiff,
-                        amount: `${adjust(item.amount)} ${item.token}`,
+                        amount: `${adjust(item.amount)} ${item.token.symbol}`,
                     })
                 ) {
                     item.sentried = true;

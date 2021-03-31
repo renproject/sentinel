@@ -1,3 +1,4 @@
+import { getRenNetworkDetails } from "@renproject/interfaces";
 import Axios from "axios";
 import { List } from "immutable";
 
@@ -18,12 +19,14 @@ export const getBCHTransactions = async (
     token: Token,
     address: string,
 ): Promise<List<StdTransaction>> => {
-    if (token !== Token.BCH) {
-        throw new Error(`Unsupported token ${token}`);
+    if (token.symbol !== "BCH") {
+        throw new Error(`Unsupported token ${token.symbol}`);
     }
 
-    if (network !== Network.Chaosnet && network !== Network.Mainnet) {
-        throw new Error(`Unsupported network ${network} for token ${token}`);
+    if (!getRenNetworkDetails(network.network).isTestnet) {
+        throw new Error(
+            `Unsupported network ${network.name} for token ${token.symbol}`,
+        );
     }
 
     const url = "bitcoin-cash";
@@ -79,12 +82,11 @@ export const getBTCTransactions = async (
     address: string,
     untilTime: number,
 ): Promise<List<StdTransaction>> => {
-    if (token !== Token.BTC) {
-        throw new Error(`Unsupported token ${token}`);
+    if (token.symbol !== "BTC") {
+        throw new Error(`Unsupported token ${token.symbol}`);
     }
 
-    const isMainnet =
-        network === Network.Chaosnet || network === Network.Mainnet;
+    const isMainnet = !getRenNetworkDetails(network.network).isTestnet;
 
     // const url =
     //     isMainnet
@@ -99,7 +101,7 @@ export const getBTCTransactions = async (
 
     // if (url === "") {
     //     throw new Error(
-    //         `Unsupported network and token pair ${network}, ${token}`,
+    //         `Unsupported network and token pair ${network.name}, ${token.symbol}`,
     //     );
     // }
 

@@ -1,36 +1,99 @@
+import {
+    BinanceSmartChain,
+    Bitcoin,
+    BitcoinCash,
+    BscConfigMap,
+    Ethereum,
+    EthereumConfigMap,
+    Zcash,
+} from "@renproject/chains";
+import { LockChain, MintChain, RenNetwork } from "@renproject/interfaces";
 import BigNumber from "bignumber.js";
-import { Map } from "immutable";
+import Web3 from "web3";
 
-export enum Network {
-    Mainnet = "MAINNET",
-
-    Chaosnet = "CHAOSNET",
-    Testnet = "TESTNET",
-    Devnet = "DEVNET",
+export interface Token {
+    symbol: string;
+    chain: LockChain;
 }
 
-export const networks = [Network.Mainnet];
-// export const networks = [Network.Chaosnet, Network.Testnet];
-
-export enum Token {
-    BTC = "BTC",
-    ZEC = "ZEC",
-    BCH = "BCH",
+export interface Network {
+    name: string;
+    network: RenNetwork;
+    rpcUrl: string;
+    tokens: Token[];
+    chain: MintChain;
 }
 
-export const networkTokens = Map<Network, Token[]>().set(Network.Mainnet, [
-    Token.BTC,
-    Token.ZEC,
-    Token.BCH,
-]);
-// .set(Network.Chaosnet, [Token.BTC, Token.ZEC, Token.BCH])
-// .set(Network.Testnet, [Token.BTC, Token.ZEC])
-// .set(Network.Devnet, [Token.BTC])
-
-export const TokenDecimals = Map<Token, number>()
-    .set(Token.BTC, 8)
-    .set(Token.ZEC, 8)
-    .set(Token.BCH, 8);
+export const networks: Network[] = [
+    {
+        name: "MAINNET",
+        network: RenNetwork.Mainnet,
+        chain: Ethereum(
+            new Web3(
+                `${EthereumConfigMap[RenNetwork.Mainnet].infura}/v3/${
+                    process.env.INFURA_KEY
+                }`,
+            ).currentProvider,
+            RenNetwork.Mainnet,
+        ),
+        rpcUrl: `${EthereumConfigMap[RenNetwork.Mainnet].infura}/v3/${
+            process.env.INFURA_KEY
+        }`,
+        tokens: [
+            {
+                symbol: "BTC",
+                chain: Bitcoin(),
+            },
+            {
+                symbol: "ZEC",
+                chain: Zcash(),
+            },
+            {
+                symbol: "BCH",
+                chain: BitcoinCash(),
+            },
+        ],
+    },
+    {
+        name: "BSC_MAINNET",
+        network: RenNetwork.MainnetVDot3,
+        chain: BinanceSmartChain(
+            new Web3(BscConfigMap[RenNetwork.MainnetVDot3].infura)
+                .currentProvider,
+            RenNetwork.MainnetVDot3,
+        ),
+        rpcUrl: BscConfigMap[RenNetwork.MainnetVDot3].infura,
+        tokens: [
+            {
+                symbol: "BTC",
+                chain: Bitcoin(),
+            },
+            {
+                symbol: "ZEC",
+                chain: Zcash(),
+            },
+            {
+                symbol: "BCH",
+                chain: BitcoinCash(),
+            },
+        ],
+    },
+    // {
+    //     name: "TESTNET",
+    //     rpcUrl: `https://kovan.infura.io/v3/${process.env.INFURA_KEY}`,
+    //     tokens: [
+    //         {
+    //             symbol: "BTC",
+    //         },
+    //         {
+    //             symbol: "ZEC",
+    //         },
+    //         {
+    //             symbol: "BCH",
+    //         }
+    //     ],
+    // },
+];
 
 export interface Burn {
     // tslint:disable: readonly-keyword
@@ -44,4 +107,5 @@ export interface Burn {
     timestamp: number;
     sentried: boolean;
     ignored: boolean;
+    burnHash: string | undefined;
 }

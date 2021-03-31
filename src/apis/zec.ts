@@ -1,3 +1,4 @@
+import { getRenNetworkDetails } from "@renproject/interfaces";
 import Axios from "axios";
 import BigNumber from "bignumber.js";
 import { List } from "immutable";
@@ -13,13 +14,13 @@ export const getZECTransactions = async (
     address: string,
     untilTime: number,
 ): Promise<List<StdTransaction>> => {
-    if (token !== Token.ZEC) {
-        throw new Error(`Unsupported token ${token}`);
+    if (token.symbol !== "ZEC") {
+        throw new Error(`Unsupported token ${token.symbol}`);
     }
 
     let ret = List<StdTransaction>();
 
-    if (network === Network.Chaosnet || network === Network.Mainnet) {
+    if (!getRenNetworkDetails(network.network).isTestnet) {
         const limit = 20;
         const URL = (offset: number) =>
             `https://api.zcha.in/v2/mainnet/accounts/${address}/recv?sort=timestamp&direction=descending&limit=${limit}&offset=${offset}`;

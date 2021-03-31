@@ -1,3 +1,5 @@
+import { Ethereum } from "@renproject/chains";
+import { LogLevel } from "@renproject/interfaces";
 import RenJS from "@renproject/ren";
 import BigNumber from "bignumber.js";
 import { Map } from "immutable";
@@ -9,21 +11,20 @@ import { Burn, Network, Token } from "../types/types";
 
 let web3s = Map<string, Web3>();
 
-const getWeb3 = (network: string) => {
-    const infuraURL = `https://${network}.infura.io/v3/${process.env.INFURA_KEY}`;
-
-    if (web3s.has(infuraURL)) {
-        return web3s.get(infuraURL);
+const getWeb3 = (rpcUrl: string) => {
+    if (web3s.has(rpcUrl)) {
+        return web3s.get(rpcUrl);
     }
 
-    const web3 = new Web3(infuraURL);
-    web3s = web3s.set(infuraURL, web3);
+    const web3 = new Web3(rpcUrl);
+    web3s = web3s.set(rpcUrl, web3);
     return web3;
 };
 
 export class ContractReader {
     public web3: Web3 | undefined;
-    public sdk: RenJS | undefined;
+    public network: Network | undefined;
+    public renJS: RenJS | undefined;
 
     constructor(_logger: Logger) {
         // this.logger = logger;
@@ -32,8 +33,9 @@ export class ContractReader {
     public readonly connect = async (
         network: Network,
     ): Promise<ContractReader> => {
-        this.sdk = new RenJS(network.toLowerCase());
-        this.web3 = getWeb3(this.sdk.network.isTestnet ? "kovan" : "mainnet");
+        this.network = network;
+        this.renJS = new RenJS(network.network);
+        this.web3 = getWeb3(network.rpcUrl);
         return this;
     };
 
@@ -56,32 +58,6 @@ export class ContractReader {
         }
     };
 
-    public getShifter = (network: Network, token: Token): string => {
-        switch (network) {
-            case Network.Mainnet:
-                switch (token) {
-                    case Token.BTC:
-                        return "0xe4b679400F0f267212D5D812B95f58C83243EE71";
-                    case Token.ZEC:
-                        return "0xc3BbD5aDb611dd74eCa6123F05B18acc886e122D";
-                    case Token.BCH:
-                        return "0xCc4FF5b8A4A7adb35F00ff0CBf53784e07c3C52F";
-                }
-            case Network.Testnet:
-                switch (token) {
-                    case Token.BTC:
-                        return "0x55363c0dBf97Ff9C0e31dAfe0fC99d3e9ce50b8A";
-                    case Token.ZEC:
-                        return "0xAACbB1e7bA99F2Ed6bd02eC96C2F9a52013Efe2d";
-                    case Token.BCH:
-                        return "0x9827c8a66a2259fd926E7Fd92EA8DF7ed1D813b1";
-                }
-        }
-        throw new Error(
-            `Unknown network (${network}) and token (${token}) combination.`,
-        );
-    };
-
     public readonly getNewLogs = async (
         network: Network,
         token: Token,
@@ -93,19 +69,24 @@ export class ContractReader {
 
         console.log(`Getting new logs from ${blockNumber.toString()}`);
 
-        const currentBlock = new BigNumber(
-            await this.web3.eth.getBlockNumber(),
-        ).minus(1);
+        const currentBlock = BigNumber.min(
+            new BigNumber(await this.web3.eth.getBlockNumber()).minus(1),
+            new BigNumber(blockNumber).plus(5000),
+        );
+
+        const gatewayAddress = await (network.chain as Ethereum).getGatewayContractAddress(
+            token.symbol,
+        );
 
         const events = await this.web3.eth.getPastLogs({
-            address: this.getShifter(network, token),
+            address: gatewayAddress,
             fromBlock: blockNumber.toString(),
             toBlock: currentBlock.toString(),
-            topics: [sha3("LogBurn(bytes,uint256,uint256,bytes)") as string],
+            topics: [sha3("LogBurn(bytes,uint256,uint256,bytes)")],
         });
         if (events.length > 0) {
             console.log(
-                `[${network}][${token}] Got ${events.length} events. Getting timestamps...`,
+                `[${network.name}][${token.symbol}] Got ${events.length} events. Getting timestamps...`,
             );
         }
 
@@ -137,7 +118,7 @@ export class ContractReader {
 
             if (i > 0 && i % 50 === 0) {
                 console.log(
-                    `[${network}][${token}] Got timestamp ${i}/${events.length}...`,
+                    `[${network.name}][${token.symbol}] Got timestamp ${i}/${events.length}...`,
                 );
             }
 
@@ -154,6 +135,7 @@ export class ContractReader {
                 address: decoded[0],
                 received: false,
                 txHash: "",
+                burnHash: event.transactionHash,
                 timestamp,
                 sentried: false,
                 ignored: false,
@@ -165,23 +147,51 @@ export class ContractReader {
         return { burns, currentBlock };
     };
 
+    getReleaseFees = async (
+        sendToken: Token,
+    ): Promise<BigNumber | undefined> => {
+        if (!this.renJS || !this.network) {
+            throw new Error("Web3 not defined");
+        }
+
+        const fees = await this.renJS.getFees({
+            asset: sendToken.symbol,
+            from: this.network.chain,
+            to: sendToken.chain,
+        });
+
+        return fees.release;
+    };
+
     // Submit burn to RenVM.
     submitBurn = async (
-        sendToken: "BTC" | "ZEC" | "BCH",
+        sendToken: Token,
         burnReference: number,
+        burnHash?: string,
     ): Promise<void> => {
-        if (!this.web3) {
+        if (!this.web3 || !this.network) {
             throw new Error("Web3 not defined");
         }
 
         let renVMHash = "";
-        await new RenJS()
-            .burnAndRelease({
-                web3Provider: this.web3.currentProvider,
-                sendToken,
-                burnReference,
-            })
-            .submit()
+        const burnAndRelease = await new RenJS("mainnet", {
+            logLevel: LogLevel.Log,
+        }).burnAndRelease({
+            asset: sendToken.symbol,
+            from: this.network.chain,
+            to: sendToken.chain,
+            burnNonce: burnReference,
+            transaction: burnHash ? burnHash : undefined,
+            // transaction:
+            // "0xcb504163f65322b8f8cd56a3ae1f2d4bd196e5f262b198608fdbe9740d5eda53",
+        });
+
+        await burnAndRelease.burn();
+
+        // await burnAndRelease.burn();
+
+        await burnAndRelease
+            .release()
             .on("txHash", (txHash) => {
                 console.log("txHash:", txHash);
                 renVMHash = txHash;

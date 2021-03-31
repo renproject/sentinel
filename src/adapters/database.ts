@@ -2,7 +2,7 @@ import BigNumber from "bignumber.js";
 import PGP from "pg-promise";
 import pg from "pg-promise/typescript/pg-subset";
 
-import { Burn, Network, networks, networkTokens, Token } from "../types/types";
+import { Burn, Network, networks, Token } from "../types/types";
 
 const pgp = PGP();
 
@@ -41,10 +41,7 @@ export class Database {
             );`);
 
         for (const network of networks) {
-            const tokens = networkTokens.get(network);
-            if (!tokens) {
-                continue;
-            }
+            const tokens = network.tokens;
             for (const token of tokens) {
                 if (drop) {
                     await this.client.query(
@@ -54,6 +51,10 @@ export class Database {
                         )};`,
                     );
                 }
+                console.log(
+                    "Loading table",
+                    this.networkTokenID(network, token),
+                );
                 await this.client.query(`
                     CREATE TABLE IF NOT EXISTS BURNS_${this.networkTokenID(
                         network,
@@ -66,7 +67,8 @@ export class Database {
                         txhash CHAR(200),
                         timestamp DECIMAL NOT NULL,
                         sentried BOOLEAN NOT NULL,
-                        ignored BOOLEAN NOT NULL
+                        ignored BOOLEAN NOT NULL,
+                        burnHash CHAR(200)
                     );`);
                 // await this.client.query(`
                 //     ALTER TABLE BURNS_${this.networkTokenID(network, token)}
@@ -114,7 +116,7 @@ export class Database {
     };
 
     public networkTokenID = (network: Network, token: Token): string =>
-        `${NETWORK_PREFIX}${network}_${token}`;
+        `${NETWORK_PREFIX}${network.name}_${token.symbol}`;
 
     public unmarshalRow = (network: Network, token: Token) => (row: {
         ref: number;
@@ -125,6 +127,7 @@ export class Database {
         timestamp: number;
         sentried: boolean;
         ignored: boolean;
+        burnhash: string | undefined;
     }) => {
         const ret: Burn = {
             ref: new BigNumber(row.ref),
@@ -137,6 +140,7 @@ export class Database {
             timestamp: row.timestamp,
             sentried: row.sentried,
             ignored: row.ignored,
+            burnHash: row.burnhash ? row.burnhash.trim() : row.burnhash,
         };
         return ret;
     };
@@ -196,7 +200,7 @@ export class Database {
             `INSERT INTO BURNS_${this.networkTokenID(
                 trade.network,
                 trade.token,
-            )} VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (ref) DO UPDATE
+            )} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (ref) DO UPDATE
                 SET 
                 amount = $2,
                 address = $3,
@@ -204,7 +208,8 @@ export class Database {
                 txhash = $5,
                 timestamp = $6,
                 sentried = $7,
-                ignored = $8
+                ignored = $8,
+                burnHash = $9
                 ;`,
 
             [
@@ -216,6 +221,7 @@ export class Database {
                 trade.timestamp,
                 trade.sentried,
                 trade.ignored,
+                trade.burnHash,
             ],
         );
     };
