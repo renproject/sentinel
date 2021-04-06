@@ -69,6 +69,7 @@
         "ava": "3.15.0",
         "axios": "^0.21.1",
         "bignumber.js": "^9.0.1",
+        "blake2b": "https://github.com/ren-forks/blake2b#f68a3a2ea0ead89086f96195bc55dc41b4505245",
         "chalk": "^4.1.0",
         "codecov": "^3.8.1",
         "cors": "^2.8.5",
