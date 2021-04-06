@@ -1,1 +1,1 @@
-web: yarn postinstall && yarn start
+web: yarn start
