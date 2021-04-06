@@ -86,6 +86,12 @@ const tick = async (
 };
 
 export const main = async (_args: readonly string[]) => {
+    // Logger
+    const logger = createLogger();
+
+    // UI server
+    setupApp(logger);
+
     // Set up sentry
     Sentry.init({
         dsn: process.env.SENTRY_DSN,
@@ -101,17 +107,11 @@ export const main = async (_args: readonly string[]) => {
         }) as any, // tslint:disable-line: no-any
     });
 
-    // Logger
-    const logger = createLogger();
-
     // Database
     const database = new Database();
     await database.connect();
 
     let contractReaders = Map<string, ContractReader>();
-
-    // UI server
-    setupApp(database, logger);
 
     let iteration = 0;
 

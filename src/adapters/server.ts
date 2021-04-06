@@ -4,14 +4,14 @@ import express from "express";
 import { Logger } from "winston";
 
 // import { Network, networks, Token } from "../types/types";
-import { Database } from "./database";
+// import { Database } from "./database";
 
 const app = express();
 app.use(cors());
 
 const port = process.env.PORT || 3000;
 
-export const setupApp = (_database: Database, logger: Logger) => {
+export const setupApp = (logger: Logger) => {
     // app.get("/", async (_req, res) => {
     //     console.log(`Handling '/'`);
 
