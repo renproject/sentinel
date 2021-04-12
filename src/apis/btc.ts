@@ -23,7 +23,7 @@ export const getBCHTransactions = async (
         throw new Error(`Unsupported token ${token.symbol}`);
     }
 
-    if (!getRenNetworkDetails(network.network).isTestnet) {
+    if (getRenNetworkDetails(network.network).isTestnet) {
         throw new Error(
             `Unsupported network ${network.name} for token ${token.symbol}`,
         );
