@@ -4,7 +4,7 @@ import { Logger } from "winston";
 
 import { Database } from "./adapters/database";
 import { createLogger } from "./adapters/logger";
-import { setupApp } from "./adapters/server";
+// import { setupApp } from "./adapters/server";
 import { sleep } from "./lib/misc";
 import { ContractReader } from "./network/subzero";
 import { Network, networks } from "./types/types";
@@ -90,7 +90,7 @@ export const main = async (_args: readonly string[]) => {
     const logger = createLogger();
 
     // UI server
-    setupApp(logger);
+    // setupApp(logger);
 
     // Set up sentry
     Sentry.init({
