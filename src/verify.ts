@@ -199,7 +199,7 @@ export const verifyBurn = async (
 
                 const rightAmount =
                     network.name.slice(0, 3) === "BSC"
-                        ? fee.isLessThan(150000)
+                        ? fee.isLessThan(200000)
                         : //   minutesBetweenBurnAndUTXO <= 60
                         utxo.numberOfVOuts && utxo.fee
                         ? fee.isEqualTo(
