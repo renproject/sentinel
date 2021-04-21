@@ -5,7 +5,7 @@ import { Logger } from "winston";
 import { Database } from "./adapters/database";
 import { createLogger } from "./adapters/logger";
 // import { setupApp } from "./adapters/server";
-import { sleep } from "./lib/misc";
+import { MINUTES, sleep, withTimeout } from "./lib/misc";
 import { ContractReader } from "./network/subzero";
 import { Network, networks } from "./types/types";
 import { verifyBurn } from "./verify";
@@ -34,35 +34,37 @@ const tick = async (
     }
 
     for (const token of network.tokens) {
-        const previousBlock = await database.getLatestBlock(network, token);
+        const tokenTick = async () => {
+            const previousBlock = await database.getLatestBlock(network, token);
 
-        const { burns, currentBlock } = await contractReader.getNewLogs(
-            network,
-            token,
-            previousBlock,
-        );
-        // if (network === Network.Testnet && token === Token.ZEC) {
-        //     await database.setLatestBlock(network, token, currentBlock);
-        //     continue;
-        // }
+            const { burns, currentBlock } = await withTimeout(
+                contractReader.getNewLogs(network, token, previousBlock),
+                5 * MINUTES,
+            );
+            // if (network === Network.Testnet && token === Token.ZEC) {
+            //     await database.setLatestBlock(network, token, currentBlock);
+            //     continue;
+            // }
 
-        logger.info(
-            `[${network.name}][${token.symbol}] Got ${
-                burns.length
-            } burns from block #${previousBlock.toString()} until block #${currentBlock.toString()}`,
-        );
+            logger.info(
+                `[${network.name}][${token.symbol}] Got ${
+                    burns.length
+                } burns from block #${previousBlock.toString()} until block #${currentBlock.toString()}`,
+            );
 
-        // TODO: Batch database requests.
-        for (let i = 0; i < burns.length; i++) {
-            if (burns.length > 50 && i > 0 && i % 50 === 0) {
-                console.log(
-                    `[${network.name}][${token.symbol}] Updated ${i}/${burns.length} in database...`,
-                );
+            // TODO: Batch database requests.
+            for (let i = 0; i < burns.length; i++) {
+                if (burns.length > 50 && i > 0 && i % 50 === 0) {
+                    console.log(
+                        `[${network.name}][${token.symbol}] Updated ${i}/${burns.length} in database...`,
+                    );
+                }
+                const burn = burns[i];
+                await database.updateBurn(burn);
             }
-            const burn = burns[i];
-            await database.updateBurn(burn);
-        }
-        await database.setLatestBlock(network, token, currentBlock);
+            await database.setLatestBlock(network, token, currentBlock);
+        };
+        await withTimeout(tokenTick(), 30 * MINUTES).catch(console.error);
     }
 
     for (const token of network.tokens) {
@@ -73,14 +75,17 @@ const tick = async (
             `[${network.name}][${token.symbol}] ${items.size} burns to check...`,
         );
         for (const item of items.values()) {
-            await verifyBurn(
-                contractReader,
-                logger,
-                database,
-                network,
-                token,
-                item,
-            );
+            await withTimeout(
+                verifyBurn(
+                    contractReader,
+                    logger,
+                    database,
+                    network,
+                    token,
+                    item,
+                ),
+                10 * MINUTES,
+            ).catch(console.error);
         }
     }
 };
@@ -129,12 +134,15 @@ export const main = async (_args: readonly string[]) => {
                         contractReader,
                     );
                 }
-                await tick(
-                    network,
-                    contractReader,
-                    logger,
-                    database,
-                    iteration % 10 === 0,
+                await withTimeout(
+                    tick(
+                        network,
+                        contractReader,
+                        logger,
+                        database,
+                        iteration % 10 === 0,
+                    ),
+                    30 * MINUTES,
                 );
             } catch (error) {
                 console.error(error);
