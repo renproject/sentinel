@@ -49,7 +49,9 @@ const tick = async (
             logger.info(
                 `[${network.name}][${token.symbol}] Got ${
                     burns.length
-                } burns from block #${previousBlock.toString()} until block #${currentBlock.toString()}`,
+                } burns from block #${previousBlock.toString()} until block #${currentBlock.toString()} (${currentBlock
+                    .minus(previousBlock)
+                    .toString()} blocks)`,
             );
 
             // TODO: Batch database requests.
