@@ -5,6 +5,10 @@ import {
     BscConfigMap,
     Ethereum,
     EthereumConfigMap,
+    Fantom,
+    FantomConfigMap,
+    Polygon,
+    PolygonConfigMap,
     Zcash,
 } from "@renproject/chains";
 import { LockChain, MintChain, RenNetwork } from "@renproject/interfaces";
@@ -22,6 +26,7 @@ export interface Network {
     rpcUrl: string;
     tokens: Token[];
     chain: MintChain;
+    blockLimit?: number;
 }
 
 export const networks: Network[] = [
@@ -77,6 +82,56 @@ export const networks: Network[] = [
                 chain: BitcoinCash(),
             },
         ],
+        blockLimit: 5000,
+    },
+    {
+        name: "FANTOM_MAINNET",
+        network: RenNetwork.MainnetVDot3,
+        chain: Fantom(
+            new Web3(FantomConfigMap[RenNetwork.MainnetVDot3].infura)
+                .currentProvider,
+            RenNetwork.MainnetVDot3,
+        ),
+        rpcUrl: FantomConfigMap[RenNetwork.MainnetVDot3].infura,
+        tokens: [
+            {
+                symbol: "BTC",
+                chain: Bitcoin(),
+            },
+            {
+                symbol: "ZEC",
+                chain: Zcash(),
+            },
+            {
+                symbol: "BCH",
+                chain: BitcoinCash(),
+            },
+        ],
+    },
+    {
+        name: "POLYGON_MAINNET",
+        network: RenNetwork.MainnetVDot3,
+        chain: Polygon(
+            new Web3(PolygonConfigMap[RenNetwork.MainnetVDot3].infura)
+                .currentProvider,
+            RenNetwork.MainnetVDot3,
+        ),
+        rpcUrl: PolygonConfigMap[RenNetwork.MainnetVDot3].infura,
+        tokens: [
+            {
+                symbol: "BTC",
+                chain: Bitcoin(),
+            },
+            {
+                symbol: "ZEC",
+                chain: Zcash(),
+            },
+            {
+                symbol: "BCH",
+                chain: BitcoinCash(),
+            },
+        ],
+        blockLimit: 1000,
     },
     // {
     //     name: "TESTNET",

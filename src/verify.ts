@@ -198,7 +198,7 @@ export const verifyBurn = async (
                 //           fee.isEqualTo(splitFee(utxo.numberOfVOuts + 1));
 
                 const rightAmount =
-                    network.name.slice(0, 3) === "BSC"
+                    network.name.slice(0, 3) !== "ETH"
                         ? fee.isLessThan(300000)
                         : //   minutesBetweenBurnAndUTXO <= 60
                         utxo.numberOfVOuts && utxo.fee
@@ -264,7 +264,7 @@ export const verifyBurn = async (
                     .submitBurn(
                         item.token,
                         item.ref.toNumber(),
-                        network.name.slice(0, 3) === "BSC"
+                        network.name.slice(0, 3) !== "ETH"
                             ? item.burnHash || undefined
                             : undefined,
                     )

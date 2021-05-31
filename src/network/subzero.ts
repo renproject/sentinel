@@ -69,10 +69,18 @@ export class ContractReader {
 
         console.log(`Getting new logs from ${blockNumber.toString()}`);
 
-        const currentBlock = BigNumber.min(
-            new BigNumber(await this.web3.eth.getBlockNumber()).minus(1),
-            new BigNumber(blockNumber).plus(5000),
-        );
+        let currentBlock = new BigNumber(
+            await this.web3.eth.getBlockNumber(),
+        ).minus(1);
+
+        // If the network has restrictions on how many logs can be fetched,
+        // limit the latest known block number.
+        if (network.blockLimit) {
+            currentBlock = BigNumber.min(
+                currentBlock,
+                new BigNumber(blockNumber).plus(network.blockLimit),
+            );
+        }
 
         const gatewayAddress = await (network.chain as Ethereum).getGatewayContractAddress(
             token.symbol,
