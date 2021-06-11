@@ -26,8 +26,11 @@ export class ContractReader {
     public network: Network | undefined;
     public renJS: RenJS | undefined;
 
+    public alreadySubmitting: Map<Token, Map<number, boolean>>;
+
     constructor(_logger: Logger) {
         // this.logger = logger;
+        this.alreadySubmitting = Map();
     }
 
     public readonly connect = async (
@@ -46,9 +49,11 @@ export class ContractReader {
             }
             if (this.web3.currentProvider) {
                 try {
-                    ((this.web3.currentProvider as unknown) as {
-                        readonly engine: { readonly stop: () => void };
-                    }).engine.stop();
+                    (
+                        this.web3.currentProvider as unknown as {
+                            readonly engine: { readonly stop: () => void };
+                        }
+                    ).engine.stop();
                 } catch (error) {
                     // Ignore error
                 }
@@ -82,9 +87,9 @@ export class ContractReader {
             );
         }
 
-        const gatewayAddress = await (network.chain as Ethereum).getGatewayContractAddress(
-            token.symbol,
-        );
+        const gatewayAddress = await (
+            network.chain as Ethereum
+        ).getGatewayContractAddress(token.symbol);
 
         const events = await this.web3.eth.getPastLogs({
             address: gatewayAddress,
@@ -181,31 +186,49 @@ export class ContractReader {
             throw new Error("Web3 not defined");
         }
 
-        let renVMHash = "";
-        const burnAndRelease = await new RenJS("mainnet", {
-            logLevel: LogLevel.Log,
-        }).burnAndRelease({
-            asset: sendToken.symbol,
-            from: this.network.chain,
-            to: sendToken.chain,
-            burnNonce: burnReference,
-            transaction: burnHash ? burnHash : undefined,
-            // transaction:
-            // "0xcb504163f65322b8f8cd56a3ae1f2d4bd196e5f262b198608fdbe9740d5eda53",
-        });
+        if (this.alreadySubmitting.getIn([sendToken, burnReference])) {
+            return;
+        }
 
-        await burnAndRelease.burn();
+        this.alreadySubmitting = this.alreadySubmitting.setIn(
+            [sendToken, burnReference],
+            true,
+        );
 
-        // await burnAndRelease.burn();
+        try {
+            let renVMHash = "";
+            const burnAndRelease = await new RenJS("mainnet", {
+                logLevel: LogLevel.Log,
+            }).burnAndRelease({
+                asset: sendToken.symbol,
+                from: this.network.chain,
+                to: sendToken.chain,
+                burnNonce: burnReference,
+                transaction: burnHash ? burnHash : undefined,
+                // transaction:
+                // "0xcb504163f65322b8f8cd56a3ae1f2d4bd196e5f262b198608fdbe9740d5eda53",
+            });
 
-        await burnAndRelease
-            .release()
-            .on("txHash", (txHash) => {
-                console.log("txHash:", txHash);
-                renVMHash = txHash;
-            })
-            .on("status", (status) =>
-                console.log(`[${renVMHash}] status:`, status),
+            await burnAndRelease.burn();
+
+            // await burnAndRelease.burn();
+
+            await burnAndRelease
+                .release()
+                .on("txHash", (txHash) => {
+                    console.log("txHash:", txHash);
+                    renVMHash = txHash;
+                })
+                .on("status", (status) =>
+                    console.log(`[${renVMHash}] status:`, status),
+                );
+        } catch (error) {
+            this.alreadySubmitting = this.alreadySubmitting.setIn(
+                [sendToken, burnReference],
+                false,
             );
+
+            throw error;
+        }
     };
 }
