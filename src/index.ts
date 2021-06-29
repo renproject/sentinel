@@ -33,41 +33,41 @@ const tick = async (
         return;
     }
 
-    for (const token of network.tokens) {
-        const tokenTick = async () => {
-            const previousBlock = await database.getLatestBlock(network, token);
+    // for (const token of network.tokens) {
+    //     const tokenTick = async () => {
+    //         const previousBlock = await database.getLatestBlock(network, token);
 
-            const { burns, currentBlock } = await withTimeout(
-                contractReader.getNewLogs(network, token, previousBlock),
-                5 * MINUTES,
-            );
-            // if (network === Network.Testnet && token === Token.ZEC) {
-            //     await database.setLatestBlock(network, token, currentBlock);
-            //     continue;
-            // }
+    //         const { burns, currentBlock } = await withTimeout(
+    //             contractReader.getNewLogs(network, token, previousBlock),
+    //             5 * MINUTES,
+    //         );
+    //         // if (network === Network.Testnet && token === Token.ZEC) {
+    //         //     await database.setLatestBlock(network, token, currentBlock);
+    //         //     continue;
+    //         // }
 
-            logger.info(
-                `[${network.name}][${token.symbol}] Got ${
-                    burns.length
-                } burns from block #${previousBlock.toString()} until block #${currentBlock.toString()} (${currentBlock
-                    .minus(previousBlock)
-                    .toString()} blocks)`,
-            );
+    //         logger.info(
+    //             `[${network.name}][${token.symbol}] Got ${
+    //                 burns.length
+    //             } burns from block #${previousBlock.toString()} until block #${currentBlock.toString()} (${currentBlock
+    //                 .minus(previousBlock)
+    //                 .toString()} blocks)`,
+    //         );
 
-            // TODO: Batch database requests.
-            for (let i = 0; i < burns.length; i++) {
-                if (burns.length > 50 && i > 0 && i % 50 === 0) {
-                    console.log(
-                        `[${network.name}][${token.symbol}] Updated ${i}/${burns.length} in database...`,
-                    );
-                }
-                const burn = burns[i];
-                await database.updateBurn(burn);
-            }
-            await database.setLatestBlock(network, token, currentBlock);
-        };
-        await withTimeout(tokenTick(), 30 * MINUTES).catch(console.error);
-    }
+    //         // TODO: Batch database requests.
+    //         for (let i = 0; i < burns.length; i++) {
+    //             if (burns.length > 50 && i > 0 && i % 50 === 0) {
+    //                 console.log(
+    //                     `[${network.name}][${token.symbol}] Updated ${i}/${burns.length} in database...`,
+    //                 );
+    //             }
+    //             const burn = burns[i];
+    //             await database.updateBurn(burn);
+    //         }
+    //         await database.setLatestBlock(network, token, currentBlock);
+    //     };
+    //     await withTimeout(tokenTick(), 30 * MINUTES).catch(console.error);
+    // }
 
     for (const token of network.tokens) {
         const items = List(

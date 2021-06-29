@@ -145,7 +145,9 @@ export const verifyBurn = async (
             }
 
             // Sent too much
-            const fee = target.minus(utxo.balanceChange);
+            const fee = target
+                .times((10000 - 15) / 10000)
+                .minus(utxo.balanceChange);
             if (fee.lt(0)) {
                 continue;
             }
@@ -255,7 +257,7 @@ export const verifyBurn = async (
         }
         if (!item.received) {
             // Try submitting to RenVM once every 10 minutes.
-            if (true || Math.floor(diffMinutes) % 10 === 0) {
+            if (true || Math.floor(diffMinutes) % 1 === 0) {
                 console.log(
                     `Submitting ${item.token} burn ${item.ref.toFixed()}`,
                 );
