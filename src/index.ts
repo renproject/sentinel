@@ -1,9 +1,9 @@
-import { config } from "dotenv";
 import { List, Map } from "immutable";
 import { Logger } from "winston";
 
 import { Database } from "./adapters/database";
 import { createLogger } from "./adapters/logger";
+import { SENTRY_DSN } from "./environmentVariables";
 // import { setupApp } from "./adapters/server";
 import { MINUTES, sleep, withTimeout } from "./lib/misc";
 import { ContractReader } from "./network/subzero";
@@ -17,11 +17,6 @@ const Sentry = require("@sentry/node");
 const minute = 60 * 1000;
 const LOOP_INTERVAL = 1 * minute;
 
-const result = config();
-if (result.error) {
-    console.error(result.error);
-}
-
 const tick = async (
     network: Network,
     contractReader: ContractReader,
@@ -33,41 +28,43 @@ const tick = async (
         return;
     }
 
-    // for (const token of network.tokens) {
-    //     const tokenTick = async () => {
-    //         const previousBlock = await database.getLatestBlock(network, token);
+    for (const token of network.tokens) {
+        const tokenTick = async () => {
+            const fromBlock = (
+                await database.getLatestBlock(network, token)
+            ).plus(1);
 
-    //         const { burns, currentBlock } = await withTimeout(
-    //             contractReader.getNewLogs(network, token, previousBlock),
-    //             5 * MINUTES,
-    //         );
-    //         // if (network === Network.Testnet && token === Token.ZEC) {
-    //         //     await database.setLatestBlock(network, token, currentBlock);
-    //         //     continue;
-    //         // }
+            const { burns, currentBlock } = await withTimeout(
+                contractReader.getNewLogs(network, token, fromBlock),
+                20 * MINUTES,
+            );
+            // if (network === Network.Testnet && token === Token.ZEC) {
+            //     await database.setLatestBlock(network, token, currentBlock);
+            //     continue;
+            // }
 
-    //         logger.info(
-    //             `[${network.name}][${token.symbol}] Got ${
-    //                 burns.length
-    //             } burns from block #${previousBlock.toString()} until block #${currentBlock.toString()} (${currentBlock
-    //                 .minus(previousBlock)
-    //                 .toString()} blocks)`,
-    //         );
+            logger.info(
+                `[${network.name}][${token.symbol}] Got ${
+                    burns.length
+                } burns from block #${fromBlock.toString()} until block #${currentBlock.toString()} (${currentBlock
+                    .minus(fromBlock)
+                    .toString()} blocks)`,
+            );
 
-    //         // TODO: Batch database requests.
-    //         for (let i = 0; i < burns.length; i++) {
-    //             if (burns.length > 50 && i > 0 && i % 50 === 0) {
-    //                 console.log(
-    //                     `[${network.name}][${token.symbol}] Updated ${i}/${burns.length} in database...`,
-    //                 );
-    //             }
-    //             const burn = burns[i];
-    //             await database.updateBurn(burn);
-    //         }
-    //         await database.setLatestBlock(network, token, currentBlock);
-    //     };
-    //     await withTimeout(tokenTick(), 30 * MINUTES).catch(console.error);
-    // }
+            // TODO: Batch database requests.
+            for (let i = 0; i < burns.length; i++) {
+                if (burns.length > 50 && i > 0 && i % 50 === 0) {
+                    console.log(
+                        `[${network.name}][${token.symbol}] Updated ${i}/${burns.length} in database...`,
+                    );
+                }
+                const burn = burns[i];
+                await database.updateBurn(burn);
+            }
+            await database.setLatestBlock(network, token, currentBlock);
+        };
+        await withTimeout(tokenTick(), 30 * MINUTES).catch(console.error);
+    }
 
     for (const token of network.tokens) {
         const items = List(
@@ -101,7 +98,7 @@ export const main = async (_args: readonly string[]) => {
 
     // Set up sentry
     Sentry.init({
-        dsn: process.env.SENTRY_DSN,
+        dsn: SENTRY_DSN,
         integrations: ((integrations: Array<{ name: string }>) => {
             // integrations will be all default integrations
             return integrations.filter((integration) => {

@@ -30,7 +30,11 @@ export const verifyBurn = async (
     console.log("");
 
     try {
-        const address = Buffer.from(strip0x(item.address), "hex").toString();
+        let address = Buffer.from(strip0x(item.address), "hex").toString();
+
+        if (token.symbol === "BTC" && address.slice(0, 2) === "BC") {
+            address = address.toLocaleLowerCase();
+        }
 
         const target = item.amount;
 
@@ -200,10 +204,10 @@ export const verifyBurn = async (
                 //           fee.isEqualTo(splitFee(utxo.numberOfVOuts + 1));
 
                 const rightAmount =
-                    network.name.slice(0, 3) !== "ETH"
+                    minutesBetweenBurnAndUTXO <= 60 &&
+                    (network.name.slice(0, 3) !== "ETH"
                         ? fee.isLessThan(300000)
-                        : //   minutesBetweenBurnAndUTXO <= 60
-                        utxo.numberOfVOuts && utxo.fee
+                        : utxo.numberOfVOuts && utxo.fee
                         ? fee.isEqualTo(
                               utxo.fee /
                                   Math.max(
@@ -218,7 +222,7 @@ export const verifyBurn = async (
                           fee.isEqualTo(35000) ||
                           fee.isEqualTo(5000) ||
                           fee.isEqualTo(16000) ||
-                          fee.isEqualTo(30000);
+                          fee.isEqualTo(30000));
 
                 if (
                     minutesBetweenBurnAndUTXO >= 0 &&
@@ -256,22 +260,22 @@ export const verifyBurn = async (
             }
         }
         if (!item.received) {
-            // Try submitting to RenVM once every 10 minutes.
-            if (true || Math.floor(diffMinutes) % 1 === 0) {
-                console.log(
-                    `Submitting ${item.token} burn ${item.ref.toFixed()}`,
-                );
-                console.log("item.burnHash !!!", item.burnHash);
-                contractReader
-                    .submitBurn(
-                        item.token,
-                        item.ref.toNumber(),
-                        network.name.slice(0, 3) !== "ETH"
-                            ? item.burnHash || undefined
-                            : undefined,
-                    )
-                    .catch(console.error);
-            }
+            // // Try submitting to RenVM once every 10 minutes.
+            // if (true || Math.floor(diffMinutes) % 1 === 0) {
+            //     console.log(
+            //         `Submitting ${item.token} burn ${item.ref.toFixed()}`,
+            //     );
+            //     console.log("item.burnHash !!!", item.burnHash);
+            //     contractReader
+            //         .submitBurn(
+            //             item.token,
+            //             item.ref.toNumber(),
+            //             network.name.slice(0, 3) !== "ETH"
+            //                 ? item.burnHash || undefined
+            //                 : undefined,
+            //         )
+            //         .catch(console.error);
+            // }
 
             let errorMessage = `🔥🔥🔥 [burn-sentry] ${network.name.toLowerCase()} ${
                 item.token.symbol

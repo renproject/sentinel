@@ -14,6 +14,7 @@ import {
 import { LockChain, MintChain, RenNetwork } from "@renproject/interfaces";
 import BigNumber from "bignumber.js";
 import Web3 from "web3";
+import { INFURA_KEY } from "../environmentVariables";
 
 export interface Token {
     symbol: string;
@@ -26,7 +27,7 @@ export interface Network {
     rpcUrl: string;
     tokens: Token[];
     chain: MintChain;
-    blockLimit?: number;
+    blockLimit: number;
 }
 
 export const networks: Network[] = [
@@ -35,15 +36,15 @@ export const networks: Network[] = [
         network: RenNetwork.Mainnet,
         chain: Ethereum(
             new Web3(
-                `${EthereumConfigMap[RenNetwork.Mainnet].infura}/v3/${
-                    process.env.INFURA_KEY
-                }`,
+                `${
+                    EthereumConfigMap[RenNetwork.Mainnet].infura
+                }/v3/${INFURA_KEY}`,
             ).currentProvider,
             RenNetwork.Mainnet,
         ),
-        rpcUrl: `${EthereumConfigMap[RenNetwork.Mainnet].infura}/v3/${
-            process.env.INFURA_KEY
-        }`,
+        rpcUrl: `${
+            EthereumConfigMap[RenNetwork.Mainnet].infura
+        }/v3/${INFURA_KEY}`,
         tokens: [
             {
                 symbol: "BTC",
@@ -58,6 +59,7 @@ export const networks: Network[] = [
                 chain: BitcoinCash(),
             },
         ],
+        blockLimit: 10000000,
     },
     {
         name: "BSC_MAINNET",
@@ -107,6 +109,7 @@ export const networks: Network[] = [
                 chain: BitcoinCash(),
             },
         ],
+        blockLimit: 10000000,
     },
     {
         name: "POLYGON_MAINNET",
@@ -135,7 +138,7 @@ export const networks: Network[] = [
     },
     // {
     //     name: "TESTNET",
-    //     rpcUrl: `https://kovan.infura.io/v3/${process.env.INFURA_KEY}`,
+    //     rpcUrl: `https://kovan.infura.io/v3/${INFURA_KEY}`,
     //     tokens: [
     //         {
     //             symbol: "BTC",

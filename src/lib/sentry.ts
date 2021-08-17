@@ -1,11 +1,12 @@
 const Sentry = require("@sentry/node");
 import chalk from "chalk";
+import { SENTRY_DSN } from "../environmentVariables";
 
 // tslint:disable-next-line: no-any
 export const reportError = (message: string, extra?: any): boolean => {
     console.error(chalk.red(message));
 
-    if (!process.env.SENTRY_DSN) {
+    if (!SENTRY_DSN) {
         return false;
     }
 

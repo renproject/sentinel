@@ -31,7 +31,7 @@
         "doc:publish": "gh-pages -m \"[ci skip] Updates\" -d build/docs",
         "version": "standard-version",
         "reset": "git clean -dfx && git reset --hard && yarn install",
-        "clean": "trash build test",
+        "clean": "rimraf build",
         "prepare-release": "run-s reset test cov:check doc:html version doc:publish"
     },
     "scripts-info": {
@@ -90,7 +90,6 @@
         "send-crypto": "^0.2.29",
         "standard-version": "^9.3.0",
         "tail": "^2.2.2",
-        "trash-cli": "^4.0.0",
         "tslint": "^6.1.3",
         "tslint-config-prettier": "^1.18.0",
         "tslint-immutable": "^6.0.1",
@@ -125,6 +124,7 @@
         ]
     },
     "devDependencies": {
+        "rimraf": "^3.0.2",
         "tslint-microsoft-contrib": "^6.2.0"
     }
 }

@@ -9,7 +9,7 @@
 // const app = express();
 // app.use(cors());
 
-// const port = process.env.PORT || 3000;
+// const port = PORT || 3000;
 
 // export const setupApp = (logger: Logger) => {
 //     // app.get("/", async (_req, res) => {

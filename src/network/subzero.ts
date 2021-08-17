@@ -6,6 +6,8 @@ import { Map } from "immutable";
 import Web3 from "web3";
 import { sha3 } from "web3-utils";
 import { Logger } from "winston";
+import { reportError } from "../lib/sentry";
+import { Log } from "web3-core";
 
 import { Burn, Network, Token } from "../types/types";
 
@@ -30,7 +32,7 @@ export class ContractReader {
 
     constructor(_logger: Logger) {
         // this.logger = logger;
-        this.alreadySubmitting = Map();
+        this.alreadySubmitting = Map<Token, Map<number, boolean>>();
     }
 
     public readonly connect = async (
@@ -66,55 +68,63 @@ export class ContractReader {
     public readonly getNewLogs = async (
         network: Network,
         token: Token,
-        blockNumber: BigNumber | string,
+        blockNumberIn: BigNumber | string,
     ) => {
         if (!this.web3) {
             throw new Error("Web3 not defined");
         }
 
-        console.log(`Getting new logs from ${blockNumber.toString()}`);
+        let fromBlock = new BigNumber(blockNumberIn);
 
-        let currentBlock = new BigNumber(
+        let latestBlock = new BigNumber(
             await this.web3.eth.getBlockNumber(),
         ).minus(1);
 
-        // If the network has restrictions on how many logs can be fetched,
-        // limit the latest known block number.
-        if (network.blockLimit) {
-            currentBlock = BigNumber.min(
-                currentBlock,
-                new BigNumber(blockNumber).plus(network.blockLimit),
-            );
+        if (fromBlock.isGreaterThan(latestBlock)) {
+            return { burns: [], currentBlock: fromBlock };
         }
 
         const gatewayAddress = await (
             network.chain as Ethereum
         ).getGatewayContractAddress(token.symbol);
 
-        const events = await this.web3.eth.getPastLogs({
-            address: gatewayAddress,
-            fromBlock: blockNumber.toString(),
-            toBlock: currentBlock.toString(),
-            topics: [sha3("LogBurn(bytes,uint256,uint256,bytes)")],
-        });
+        let events: Log[] = [];
+
+        let batchesRemaining = 1;
+
+        let toBlock;
+
+        while (fromBlock.isLessThan(latestBlock) && batchesRemaining > 0) {
+            toBlock = BigNumber.min(
+                latestBlock,
+                fromBlock.plus(network.blockLimit),
+            );
+
+            const blocksBeingFetched = toBlock.minus(fromBlock);
+            const totalRemainingBlocks = latestBlock.minus(fromBlock);
+
+            console.log(
+                `Getting new logs from ${fromBlock.toString()} to ${toBlock.toString()} (${blocksBeingFetched.toString()} of ${totalRemainingBlocks.toString()})`,
+            );
+
+            const newEvents = await this.web3.eth.getPastLogs({
+                address: gatewayAddress,
+                fromBlock: fromBlock.toString(),
+                toBlock: toBlock.toString(),
+                topics: [sha3("LogBurn(bytes,uint256,uint256,bytes)")],
+            });
+
+            events = events.concat(...newEvents);
+
+            fromBlock = toBlock.plus(1);
+            batchesRemaining -= 1;
+        }
+
         if (events.length > 0) {
             console.log(
                 `[${network.name}][${token.symbol}] Got ${events.length} events. Getting timestamps...`,
             );
         }
-
-        // const events = [{
-        //     address: '0x1258d7FF385d1d81017d4a3d464c02f74C61902a',
-        //     blockHash: '0x30eb35bb07064f07982a5fd0cbf5ecce69b77f1dbc0ba98e62eb08e5907a2241',
-        //     blockNumber: 9064433,
-        //     data: '0x00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000019b700000000000000000000000000000000000000000000000000000000000000022333339707a416554455a343172685255417164416a52656f73645576655650534c47000000000000000000000000000000000000000000000000000000000000',
-        //     logIndex: 132,
-        //     removed: false,
-        //     topics: [],
-        //     transactionHash: '0x518f781312eb6d3c082bd99944ef12f2d32cf85672026e3a84db74f357157765',
-        //     transactionIndex: 151,
-        //     id: 'log_0x7662a5baaf039f096a5d3992a6cdd284ef407def1966b2899f2092afe9141d74'
-        // }];
 
         const burns: Burn[] = [];
 
@@ -157,7 +167,7 @@ export class ContractReader {
             burns.push(burn);
         }
 
-        return { burns, currentBlock };
+        return { burns, currentBlock: toBlock || fromBlock };
     };
 
     getReleaseFees = async (
