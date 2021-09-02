@@ -1,6 +1,7 @@
 import BigNumber from "bignumber.js";
 import PGP from "pg-promise";
 import pg from "pg-promise/typescript/pg-subset";
+import { DATABASE_URL } from "../environmentVariables";
 
 import { Burn, Network, networks, Token } from "../types/types";
 
@@ -9,7 +10,7 @@ const pgp = PGP();
 export const NETWORK_PREFIX = "SUBZERO_";
 
 export class Database {
-    public connectionString = process.env.DATABASE_URL;
+    public connectionString = DATABASE_URL;
     private client: PGP.IDatabase<{}, pg.IClient> | undefined;
 
     public connect = async () => {
@@ -118,32 +119,34 @@ export class Database {
     public networkTokenID = (network: Network, token: Token): string =>
         `${NETWORK_PREFIX}${network.name}_${token.symbol}`;
 
-    public unmarshalRow = (network: Network, token: Token) => (row: {
-        ref: number;
-        amount: string;
-        address: string;
-        received: boolean;
-        txhash: string;
-        timestamp: number;
-        sentried: boolean;
-        ignored: boolean;
-        burnhash: string | undefined;
-    }) => {
-        const ret: Burn = {
-            ref: new BigNumber(row.ref),
-            network,
-            token,
-            amount: new BigNumber(row.amount),
-            address: row.address,
-            received: row.received,
-            txHash: row.txhash,
-            timestamp: row.timestamp,
-            sentried: row.sentried,
-            ignored: row.ignored,
-            burnHash: row.burnhash ? row.burnhash.trim() : row.burnhash,
+    public unmarshalRow =
+        (network: Network, token: Token) =>
+        (row: {
+            ref: number;
+            amount: string;
+            address: string;
+            received: boolean;
+            txhash: string;
+            timestamp: number;
+            sentried: boolean;
+            ignored: boolean;
+            burnhash: string | undefined;
+        }) => {
+            const ret: Burn = {
+                ref: new BigNumber(row.ref),
+                network,
+                token,
+                amount: new BigNumber(row.amount),
+                address: row.address,
+                received: row.received,
+                txHash: row.txhash,
+                timestamp: row.timestamp,
+                sentried: row.sentried,
+                ignored: row.ignored,
+                burnHash: row.burnhash ? row.burnhash.trim() : row.burnhash,
+            };
+            return ret;
         };
-        return ret;
-    };
 
     public getBurns = async (
         network: Network,

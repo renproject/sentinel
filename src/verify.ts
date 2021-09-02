@@ -204,8 +204,7 @@ export const verifyBurn = async (
                 //           fee.isEqualTo(splitFee(utxo.numberOfVOuts + 1));
 
                 const rightAmount =
-                    minutesBetweenBurnAndUTXO <= 60 &&
-                    (network.name.slice(0, 3) !== "ETH"
+                    network.name.slice(0, 3) !== "ETH"
                         ? fee.isLessThan(300000)
                         : utxo.numberOfVOuts && utxo.fee
                         ? fee.isEqualTo(
@@ -222,11 +221,13 @@ export const verifyBurn = async (
                           fee.isEqualTo(35000) ||
                           fee.isEqualTo(5000) ||
                           fee.isEqualTo(16000) ||
-                          fee.isEqualTo(30000));
+                          fee.isEqualTo(30000);
 
+                // @notice - to enable only using utxos less than an hour after
+                // the burn, uncomment the first condition.
                 if (
-                    minutesBetweenBurnAndUTXO >= 0 &&
                     // minutesBetweenBurnAndUTXO <= 60 &&
+                    minutesBetweenBurnAndUTXO >= 0 &&
                     txTimestamp >= item.timestamp &&
                     rightAmount &&
                     txIsFree
