@@ -1,3 +1,7 @@
+import BigNumber from "bignumber.js";
+import { ethers } from "ethers";
+import Web3 from "web3";
+
 import {
     BinanceSmartChain,
     Bitcoin,
@@ -12,8 +16,7 @@ import {
     Zcash,
 } from "@renproject/chains";
 import { LockChain, MintChain, RenNetwork } from "@renproject/interfaces";
-import BigNumber from "bignumber.js";
-import Web3 from "web3";
+
 import { INFURA_KEY } from "../environmentVariables";
 
 export interface Token {
@@ -35,11 +38,11 @@ export const networks: Network[] = [
         name: "MAINNET",
         network: RenNetwork.Mainnet,
         chain: Ethereum(
-            new Web3(
-                `${
-                    EthereumConfigMap[RenNetwork.Mainnet].infura
-                }/v3/${INFURA_KEY}`,
-            ).currentProvider,
+            new ethers.providers.JsonRpcProvider(
+                EthereumConfigMap[RenNetwork.Mainnet].publicProvider({
+                    infura: INFURA_KEY,
+                }),
+            ),
             RenNetwork.Mainnet,
         ),
         rpcUrl: `${
@@ -63,13 +66,14 @@ export const networks: Network[] = [
     },
     {
         name: "BSC_MAINNET",
-        network: RenNetwork.MainnetVDot3,
+        network: RenNetwork.Mainnet,
         chain: BinanceSmartChain(
-            new Web3(BscConfigMap[RenNetwork.MainnetVDot3].infura)
-                .currentProvider,
-            RenNetwork.MainnetVDot3,
+            new ethers.providers.JsonRpcProvider(
+                BscConfigMap[RenNetwork.Mainnet].publicProvider(),
+            ),
+            RenNetwork.Mainnet,
         ),
-        rpcUrl: BscConfigMap[RenNetwork.MainnetVDot3].infura,
+        rpcUrl: BscConfigMap[RenNetwork.Mainnet].infura,
         tokens: [
             {
                 symbol: "BTC",
@@ -88,13 +92,14 @@ export const networks: Network[] = [
     },
     {
         name: "FANTOM_MAINNET",
-        network: RenNetwork.MainnetVDot3,
+        network: RenNetwork.Mainnet,
         chain: Fantom(
-            new Web3(FantomConfigMap[RenNetwork.MainnetVDot3].infura)
-                .currentProvider,
-            RenNetwork.MainnetVDot3,
+            new ethers.providers.JsonRpcProvider(
+                FantomConfigMap[RenNetwork.Mainnet].publicProvider(),
+            ),
+            RenNetwork.Mainnet,
         ),
-        rpcUrl: FantomConfigMap[RenNetwork.MainnetVDot3].infura,
+        rpcUrl: FantomConfigMap[RenNetwork.Mainnet].infura,
         tokens: [
             {
                 symbol: "BTC",
@@ -113,13 +118,14 @@ export const networks: Network[] = [
     },
     {
         name: "POLYGON_MAINNET",
-        network: RenNetwork.MainnetVDot3,
+        network: RenNetwork.Mainnet,
         chain: Polygon(
-            new Web3(PolygonConfigMap[RenNetwork.MainnetVDot3].infura)
-                .currentProvider,
-            RenNetwork.MainnetVDot3,
+            new ethers.providers.JsonRpcProvider(
+                PolygonConfigMap[RenNetwork.Mainnet].publicProvider(),
+            ),
+            RenNetwork.Mainnet,
         ),
-        rpcUrl: PolygonConfigMap[RenNetwork.MainnetVDot3].infura,
+        rpcUrl: PolygonConfigMap[RenNetwork.Mainnet].infura,
         tokens: [
             {
                 symbol: "BTC",

@@ -1,14 +1,15 @@
-import { Ethereum } from "@renproject/chains";
-import { LogLevel } from "@renproject/interfaces";
-import RenJS from "@renproject/ren";
 import BigNumber from "bignumber.js";
 import { Map } from "immutable";
 import Web3 from "web3";
+import { Log } from "web3-core";
 import { sha3 } from "web3-utils";
 import { Logger } from "winston";
-import { reportError } from "../lib/sentry";
-import { Log } from "web3-core";
 
+import { Ethereum } from "@renproject/chains";
+import { LogLevel } from "@renproject/interfaces";
+import RenJS from "@renproject/ren";
+
+import { reportError } from "../lib/sentry";
 import { Burn, Network, Token } from "../types/types";
 
 let web3s = Map<string, Web3>();
@@ -114,7 +115,7 @@ export class ContractReader {
                 topics: [sha3("LogBurn(bytes,uint256,uint256,bytes)")],
             });
 
-            events = events.concat(...newEvents);
+            events = events.concat(...(newEvents as Log[]));
 
             fromBlock = toBlock.plus(1);
             batchesRemaining -= 1;
@@ -172,7 +173,7 @@ export class ContractReader {
 
     getReleaseFees = async (
         sendToken: Token,
-    ): Promise<BigNumber | undefined> => {
+    ): Promise<{ release: BigNumber | undefined; burn: number }> => {
         if (!this.renJS || !this.network) {
             throw new Error("Web3 not defined");
         }
@@ -183,7 +184,10 @@ export class ContractReader {
             to: sendToken.chain,
         });
 
-        return fees.release;
+        return {
+            release: fees.release,
+            burn: fees.burn,
+        };
     };
 
     // Submit burn to RenVM.

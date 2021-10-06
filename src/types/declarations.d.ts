@@ -1,2 +1,1 @@
-declare module "ansi-to-html";
-declare module "bitcore-lib";
+declare module "buffer-layout";

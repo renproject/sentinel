@@ -139,11 +139,11 @@ export const main = async (_args: readonly string[]) => {
                         contractReader,
                         logger,
                         database,
-                        iteration % 10 === 0,
+                        iteration % 10 !== 0,
                     ),
                     30 * MINUTES,
                 );
-            } catch (error) {
+            } catch (error: any) {
                 console.error(error);
                 logger.error(error.message);
             }

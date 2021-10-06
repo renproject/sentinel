@@ -4,6 +4,7 @@ import moment from "moment";
 import { Logger } from "winston";
 
 import { strip0x } from "@renproject/utils";
+
 import { Database } from "./adapters/database";
 import { getBCHTransactions, getBTCTransactions } from "./apis/btc";
 import { getZECTransactions } from "./apis/zec";
@@ -121,12 +122,12 @@ export const verifyBurn = async (
             .reverse();
 
         const networkFees = await contractReader.getReleaseFees(token);
-        if (networkFees && target.lt(networkFees.plus(547))) {
+        if (networkFees.release && target.lt(networkFees.release.plus(547))) {
             item.ignored = true;
             await database.updateBurn(item);
             console.log(
                 chalk.yellow(
-                    `[WARNING] Burn of ${target.toFixed()} is less than minimum: ${networkFees.plus(
+                    `[WARNING] Burn of ${target.toFixed()} is less than minimum: ${networkFees.release.plus(
                         547,
                     )}`,
                 ),
@@ -149,10 +150,7 @@ export const verifyBurn = async (
             }
 
             // Sent too much
-            const fee = target
-                .times((10000 - 15) / 10000)
-                .minus(utxo.balanceChange);
-            if (fee.lt(0)) {
+            if (target.isLessThan(utxo.balanceChange)) {
                 continue;
             }
 
@@ -170,6 +168,11 @@ export const verifyBurn = async (
                     utxo.txHash,
                 );
                 const txIsFree = takenBy.length === 0;
+                // const fee = target.minus(utxo.balanceChange);
+                const fee = target
+                    .times((10000 - networkFees.burn) / 10000)
+                    .minus(utxo.balanceChange);
+
                 console.log(
                     `[DEBUG] Checking UTXO ${utxo.txHash.slice(
                         0,
@@ -312,7 +315,7 @@ export const verifyBurn = async (
                 console.log(chalk.yellow(`[WARNING] ${errorMessage}`));
             }
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error(error);
         logger.error(error);
     }

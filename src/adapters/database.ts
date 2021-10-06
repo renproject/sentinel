@@ -1,8 +1,8 @@
 import BigNumber from "bignumber.js";
 import PGP from "pg-promise";
 import pg from "pg-promise/typescript/pg-subset";
-import { DATABASE_URL } from "../environmentVariables";
 
+import { DATABASE_URL } from "../environmentVariables";
 import { Burn, Network, networks, Token } from "../types/types";
 
 const pgp = PGP();
