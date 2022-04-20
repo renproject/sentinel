@@ -24,9 +24,9 @@
     },
     "dependencies": {
         "@bitjson/typedoc": "^0.15.0-0",
-        "@renproject/chains": "^2.5.9",
-        "@renproject/interfaces": "^2.5.9",
-        "@renproject/ren": "^2.5.9",
+        "@renproject/chains": "^2.5.12",
+        "@renproject/interfaces": "^2.5.10-1",
+        "@renproject/ren": "^2.5.12",
         "@sentry/node": "^6.13.2",
         "@types/cors": "^2.8.12",
         "@types/express": "^4.17.13",

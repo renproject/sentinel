@@ -264,22 +264,22 @@ export const verifyBurn = async (
             }
         }
         if (!item.received) {
-            // // Try submitting to RenVM once every 10 minutes.
-            // if (true || Math.floor(diffMinutes) % 1 === 0) {
-            //     console.log(
-            //         `Submitting ${item.token} burn ${item.ref.toFixed()}`,
-            //     );
-            //     console.log("item.burnHash !!!", item.burnHash);
-            //     contractReader
-            //         .submitBurn(
-            //             item.token,
-            //             item.ref.toNumber(),
-            //             network.name.slice(0, 3) !== "ETH"
-            //                 ? item.burnHash || undefined
-            //                 : undefined,
-            //         )
-            //         .catch(console.error);
-            // }
+            // Try submitting to RenVM once every 10 minutes.
+            if (true || Math.floor(diffMinutes) % 1 === 0) {
+                console.log(
+                    `Submitting ${item.token} burn ${item.ref.toFixed()}`,
+                );
+                console.log("Burn hash:", item.burnHash);
+                contractReader
+                    .submitBurn(
+                        item.token,
+                        item.ref.toNumber(),
+                        network.name.slice(0, 3) !== "ETH"
+                            ? item.burnHash || undefined
+                            : undefined,
+                    )
+                    .catch(console.error);
+            }
 
             let errorMessage = `🔥🔥🔥 [burn-sentry] ${network.name.toLowerCase()} ${
                 item.token.symbol
