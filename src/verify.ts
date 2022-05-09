@@ -56,7 +56,7 @@ export const verifyBurn = async (
         ) {
             const errorMessage = `🔥🔥🔥 [burn-sentry] ${network.name.toLowerCase()} ${
                 item.token.symbol
-            } ${item.fromTxHash.trim()} #${item.ref.toFixed()} (${naturalDiff}) - Invalid burn recipient "${Buffer.from(
+            } ${item.burnHash?.trim()} #${item.ref.toFixed()} (${naturalDiff}) - Invalid burn recipient "${Buffer.from(
                 address.slice(2),
                 "hex",
             ).toString()}"`;
@@ -83,8 +83,9 @@ export const verifyBurn = async (
             return;
         }
 
-        if (token.symbol === "BTC" && !/^[a-z0-9:_-]:+$/i.exec(address)) {
+        if (token.symbol === "BTC" && !/^[a-z0-9:_-]+$/i.exec(address)) {
             address = bs58.encode(Buffer.from(strip0x(item.address), "hex"));
+            console.log(`Updated address to ${address}`);
         }
 
         logger.info(
@@ -134,7 +135,7 @@ export const verifyBurn = async (
             ) {
                 let errorMessage = `🔥🔥🔥 [burn-sentry] ${network.name.toLowerCase()} ${
                     item.token.symbol
-                } ${item.fromTxHash.trim()} #${item.ref.toFixed()} (${naturalDiff}) - ${adjust(
+                } ${item.burnHash?.trim()} #${item.ref.toFixed()} (${naturalDiff}) - ${adjust(
                     item.amount,
                 )} ${
                     item.token.symbol
@@ -312,7 +313,7 @@ export const verifyBurn = async (
                     .catch(console.error);
             }
 
-            let errorMessage = `🔥🔥🔥 [burn-sentry] ${network.name.toLowerCase()} ${item.fromTxHash.trim()} ${adjust(
+            let errorMessage = `🔥🔥🔥 [burn-sentry] ${network.name.toLowerCase()} ${item.burnHash?.trim()} ${adjust(
                 item.amount,
             )} ${
                 item.token.symbol

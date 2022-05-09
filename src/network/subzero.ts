@@ -158,7 +158,6 @@ export class ContractReader {
                 address: decoded[0],
                 received: false,
                 txHash: "",
-                fromTxHash: event.transactionHash,
                 burnHash: event.transactionHash,
                 timestamp,
                 sentried: false,

@@ -66,7 +66,6 @@ export class Database {
                         address CHAR(200) NOT NULL,
                         received BOOLEAN,
                         txhash CHAR(200),
-                        fromtxhash CHAR(200),
                         timestamp DECIMAL NOT NULL,
                         sentried BOOLEAN NOT NULL,
                         ignored BOOLEAN NOT NULL,
@@ -128,7 +127,6 @@ export class Database {
             address: string;
             received: boolean;
             txhash: string;
-            fromtxhash: string;
             timestamp: number;
             sentried: boolean;
             ignored: boolean;
@@ -142,7 +140,6 @@ export class Database {
                 address: row.address,
                 received: row.received,
                 txHash: row.txhash,
-                fromTxHash: row.fromtxhash,
                 timestamp: row.timestamp,
                 sentried: row.sentried,
                 ignored: row.ignored,
@@ -229,7 +226,7 @@ export class Database {
                 trade.sentried,
                 trade.ignored,
                 trade.burnHash,
-                trade.fromTxHash,
+                "",
             ],
         );
     };

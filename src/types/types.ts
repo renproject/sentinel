@@ -167,7 +167,6 @@ export interface Burn {
     amount: BigNumber;
     received: boolean;
     txHash: string | null;
-    fromTxHash: string;
     timestamp: number;
     sentried: boolean;
     ignored: boolean;
