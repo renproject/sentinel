@@ -1,7 +1,3 @@
-import BigNumber from "bignumber.js";
-import { ethers } from "ethers";
-import Web3 from "web3";
-
 import {
     BinanceSmartChain,
     Bitcoin,
@@ -16,6 +12,9 @@ import {
     Zcash,
 } from "@renproject/chains";
 import { LockChain, MintChain, RenNetwork } from "@renproject/interfaces";
+import BigNumber from "bignumber.js";
+import { ethers } from "ethers";
+import Web3 from "web3";
 
 import { INFURA_KEY } from "../environmentVariables";
 
@@ -168,6 +167,7 @@ export interface Burn {
     amount: BigNumber;
     received: boolean;
     txHash: string | null;
+    fromTxHash: string;
     timestamp: number;
     sentried: boolean;
     ignored: boolean;

@@ -1,7 +1,6 @@
+import { getRenNetworkDetails } from "@renproject/interfaces";
 import Axios from "axios";
 import { List } from "immutable";
-
-import { getRenNetworkDetails } from "@renproject/interfaces";
 
 import { BlockChairAddress } from "../apis/btcTypes";
 import { Network, Token } from "../types/types";

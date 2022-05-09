@@ -1,12 +1,16 @@
+import { strip0x } from "@renproject/utils";
 import BigNumber from "bignumber.js";
+import bs58 from "bs58";
 import chalk from "chalk";
 import moment from "moment";
 import { Logger } from "winston";
 
-import { strip0x } from "@renproject/utils";
-
 import { Database } from "./adapters/database";
-import { getBCHTransactions, getBTCTransactions } from "./apis/btc";
+import {
+    getBCHTransactions,
+    getBTCTransactions,
+    StdTransaction,
+} from "./apis/btc";
 import { getZECTransactions } from "./apis/zec";
 import { timeAgo, timeDifference } from "./lib/naturalTime";
 import { reportError } from "./lib/sentry";
@@ -52,7 +56,7 @@ export const verifyBurn = async (
         ) {
             const errorMessage = `🔥🔥🔥 [burn-sentry] ${network.name.toLowerCase()} ${
                 item.token.symbol
-            } #${item.ref.toFixed()} (${naturalDiff}) - Invalid burn recipient "${Buffer.from(
+            } ${item.fromTxHash.trim()} #${item.ref.toFixed()} (${naturalDiff}) - Invalid burn recipient "${Buffer.from(
                 address.slice(2),
                 "hex",
             ).toString()}"`;
@@ -79,6 +83,10 @@ export const verifyBurn = async (
             return;
         }
 
+        if (token.symbol === "BTC" && !/^[a-z0-9:_-]:+$/i.exec(address)) {
+            address = bs58.encode(Buffer.from(strip0x(item.address), "hex"));
+        }
+
         logger.info(
             `[${network.name}][${
                 token.symbol
@@ -100,22 +108,45 @@ export const verifyBurn = async (
         const taken: string[] = [];
         // const past: string[] = [];
 
-        const transactions =
-            token.symbol === "ZEC"
-                ? await getZECTransactions(
-                      network,
-                      token,
-                      address,
-                      item.timestamp,
-                  )
-                : token.symbol === "BCH"
-                ? await getBCHTransactions(network, token, address)
-                : await getBTCTransactions(
-                      network,
-                      token,
-                      address,
-                      item.timestamp,
-                  );
+        let transactions: Immutable.List<StdTransaction>;
+        try {
+            transactions =
+                token.symbol === "ZEC"
+                    ? await getZECTransactions(
+                          network,
+                          token,
+                          address,
+                          item.timestamp,
+                      )
+                    : token.symbol === "BCH"
+                    ? await getBCHTransactions(network, token, address)
+                    : await getBTCTransactions(
+                          network,
+                          token,
+                          address,
+                          item.timestamp,
+                      );
+        } catch (error) {
+            if (
+                error instanceof Error &&
+                (error as any).respose &&
+                /Too many history entries/.exec((error as any).response.data)
+            ) {
+                let errorMessage = `🔥🔥🔥 [burn-sentry] ${network.name.toLowerCase()} ${
+                    item.token.symbol
+                } ${item.fromTxHash.trim()} #${item.ref.toFixed()} (${naturalDiff}) - ${adjust(
+                    item.amount,
+                )} ${
+                    item.token.symbol
+                } to ${address} - Unable to fetch transactions: ${
+                    error.message
+                }`;
+                console.log(chalk.yellow(`[WARNING] ${errorMessage}`));
+                item.ignored = true;
+                await database.updateBurn(item);
+            }
+            throw error;
+        }
 
         const sortedUtxos = transactions
             .sortBy((tx) => new Date(`${tx.time} UTC`).getTime())
@@ -281,11 +312,11 @@ export const verifyBurn = async (
                     .catch(console.error);
             }
 
-            let errorMessage = `🔥🔥🔥 [burn-sentry] ${network.name.toLowerCase()} ${
-                item.token.symbol
-            } #${item.ref.toFixed()} (${naturalDiff}) - ${adjust(
+            let errorMessage = `🔥🔥🔥 [burn-sentry] ${network.name.toLowerCase()} ${item.fromTxHash.trim()} ${adjust(
                 item.amount,
-            )} ${item.token.symbol} to ${address} - burn not found`;
+            )} ${
+                item.token.symbol
+            } #${item.ref.toFixed()} (${naturalDiff}) to ${address} - burn not found`;
             if (fees.length > 0) {
                 errorMessage += ` - Other utxos: ${fees.join(", ")}`;
             }

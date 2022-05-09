@@ -1,13 +1,12 @@
+import { Ethereum } from "@renproject/chains";
+import { LogLevel } from "@renproject/interfaces";
+import RenJS from "@renproject/ren";
 import BigNumber from "bignumber.js";
 import { Map } from "immutable";
 import Web3 from "web3";
 import { Log } from "web3-core";
 import { sha3 } from "web3-utils";
 import { Logger } from "winston";
-
-import { Ethereum } from "@renproject/chains";
-import { LogLevel } from "@renproject/interfaces";
-import RenJS from "@renproject/ren";
 
 import { reportError } from "../lib/sentry";
 import { Burn, Network, Token } from "../types/types";
@@ -159,6 +158,7 @@ export class ContractReader {
                 address: decoded[0],
                 received: false,
                 txHash: "",
+                fromTxHash: event.transactionHash,
                 burnHash: event.transactionHash,
                 timestamp,
                 sentried: false,

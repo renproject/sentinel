@@ -66,6 +66,7 @@ export class Database {
                         address CHAR(200) NOT NULL,
                         received BOOLEAN,
                         txhash CHAR(200),
+                        fromtxhash CHAR(200),
                         timestamp DECIMAL NOT NULL,
                         sentried BOOLEAN NOT NULL,
                         ignored BOOLEAN NOT NULL,
@@ -127,6 +128,7 @@ export class Database {
             address: string;
             received: boolean;
             txhash: string;
+            fromtxhash: string;
             timestamp: number;
             sentried: boolean;
             ignored: boolean;
@@ -140,6 +142,7 @@ export class Database {
                 address: row.address,
                 received: row.received,
                 txHash: row.txhash,
+                fromTxHash: row.fromtxhash,
                 timestamp: row.timestamp,
                 sentried: row.sentried,
                 ignored: row.ignored,
@@ -203,7 +206,7 @@ export class Database {
             `INSERT INTO BURNS_${this.networkTokenID(
                 trade.network,
                 trade.token,
-            )} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (ref) DO UPDATE
+            )} VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT (ref) DO UPDATE
                 SET 
                 amount = $2,
                 address = $3,
@@ -212,7 +215,8 @@ export class Database {
                 timestamp = $6,
                 sentried = $7,
                 ignored = $8,
-                burnHash = $9
+                burnHash = $9,
+                fromtxhash = $10
                 ;`,
 
             [
@@ -225,6 +229,7 @@ export class Database {
                 trade.sentried,
                 trade.ignored,
                 trade.burnHash,
+                trade.fromTxHash,
             ],
         );
     };
