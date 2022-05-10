@@ -2,12 +2,14 @@ import { Ethereum } from "@renproject/chains";
 import { LogLevel } from "@renproject/interfaces";
 import RenJS from "@renproject/ren";
 import BigNumber from "bignumber.js";
+import chalk from "chalk";
 import { Map } from "immutable";
 import Web3 from "web3";
 import { Log } from "web3-core";
 import { sha3 } from "web3-utils";
 import { Logger } from "winston";
 
+import { extractError } from "../lib/extractError";
 import { reportError } from "../lib/sentry";
 import { Burn, Network, Token } from "../types/types";
 
@@ -27,11 +29,12 @@ export class ContractReader {
     public web3: Web3 | undefined;
     public network: Network | undefined;
     public renJS: RenJS | undefined;
+    public logger: Logger;
 
     public alreadySubmitting: Map<Token, Map<number, boolean>>;
 
-    constructor(_logger: Logger) {
-        // this.logger = logger;
+    constructor(logger: Logger) {
+        this.logger = logger;
         this.alreadySubmitting = Map<Token, Map<number, boolean>>();
     }
 
@@ -103,7 +106,7 @@ export class ContractReader {
             const blocksBeingFetched = toBlock.minus(fromBlock);
             const totalRemainingBlocks = latestBlock.minus(fromBlock);
 
-            console.log(
+            this.logger.info(
                 `Getting new logs from ${fromBlock.toString()} to ${toBlock.toString()} (${blocksBeingFetched.toString()} of ${totalRemainingBlocks.toString()})`,
             );
 
@@ -121,8 +124,10 @@ export class ContractReader {
         }
 
         if (events.length > 0) {
-            console.log(
-                `[${network.name}][${token.symbol}] Got ${events.length} events. Getting timestamps...`,
+            this.logger.info(
+                `[${network.name}][${token.symbol}] Got ${chalk.green(
+                    events.length,
+                )} events. Getting timestamps...`,
             );
         }
 
@@ -140,7 +145,7 @@ export class ContractReader {
             );
 
             if (i > 0 && i % 50 === 0) {
-                console.log(
+                this.logger.info(
                     `[${network.name}][${token.symbol}] Got timestamp ${i}/${events.length}...`,
                 );
             }
@@ -212,14 +217,29 @@ export class ContractReader {
             let renVMHash = "";
             const burnAndRelease = await new RenJS("mainnet", {
                 logLevel: LogLevel.Log,
+                logger: {
+                    error: (...m: unknown[]) =>
+                        this.logger.error(chalk.gray(m)),
+                    warn: (...m: unknown[]) => this.logger.warn(chalk.gray(m)),
+                    log: (...m: unknown[]) => this.logger.info(chalk.gray(m)),
+                    info: (...m: unknown[]) => this.logger.info(chalk.gray(m)),
+                    debug: (...m: unknown[]) =>
+                        this.logger.debug(chalk.gray(m)),
+                    trace: (...m: unknown[]) =>
+                        this.logger.debug(chalk.gray(m)),
+                },
+                useV2TransactionFormat: true,
             }).burnAndRelease({
                 asset: sendToken.symbol,
                 from: this.network.chain,
-                to: sendToken.chain,
+                to: {
+                    ...sendToken.chain,
+                    addressToBytes: (address) => {
+                        return Buffer.from(address);
+                    },
+                },
                 burnNonce: burnReference,
                 transaction: burnHash ? burnHash : undefined,
-                // transaction:
-                // "0xcb504163f65322b8f8cd56a3ae1f2d4bd196e5f262b198608fdbe9740d5eda53",
             });
 
             await burnAndRelease.burn();
@@ -229,12 +249,14 @@ export class ContractReader {
             await burnAndRelease
                 .release()
                 .on("txHash", (txHash) => {
-                    console.log("txHash:", txHash);
+                    this.logger.info(chalk.gray("txHash:", txHash));
                     renVMHash = txHash;
                 })
-                .on("status", (status) =>
-                    console.log(`[${renVMHash}] status:`, status),
-                );
+                .on("status", (status) => {
+                    this.logger.info(
+                        chalk.gray(`[${renVMHash}] status:`, status),
+                    );
+                });
         } catch (error) {
             this.alreadySubmitting = this.alreadySubmitting.setIn(
                 [sendToken, burnReference],

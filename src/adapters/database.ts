@@ -1,4 +1,5 @@
 import BigNumber from "bignumber.js";
+import chalk from "chalk";
 import PGP from "pg-promise";
 import pg from "pg-promise/typescript/pg-subset";
 
@@ -54,7 +55,7 @@ export class Database {
                 }
                 console.log(
                     "Loading table",
-                    this.networkTokenID(network, token),
+                    chalk.green(this.networkTokenID(network, token)),
                 );
                 await this.client.query(`
                     CREATE TABLE IF NOT EXISTS BURNS_${this.networkTokenID(
@@ -212,7 +213,7 @@ export class Database {
                 timestamp = $6,
                 sentried = $7,
                 ignored = $8,
-                burnHash = $9,
+                burnhash = $9,
                 fromtxhash = $10
                 ;`,
 

@@ -8,7 +8,7 @@ export const LOG_FILE_NAME = "./combined.log";
 export const createLogger = () => {
     return winston.createLogger({
         defaultMeta: { service: "user-service" },
-        level: "info",
+        level: "debug",
         transports: [
             new winston.transports.Console({
                 format: winston.format.combine(
@@ -16,7 +16,13 @@ export const createLogger = () => {
                     format,
                 ),
             }),
-            new winston.transports.File({ filename: LOG_FILE_NAME, format }),
+            new winston.transports.File({
+                filename: LOG_FILE_NAME,
+                format: winston.format.combine(
+                    winston.format.uncolorize(),
+                    format,
+                ),
+            }),
         ],
     });
 };

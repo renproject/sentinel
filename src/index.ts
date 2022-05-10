@@ -54,7 +54,7 @@ const tick = async (
             // TODO: Batch database requests.
             for (let i = 0; i < burns.length; i++) {
                 if (burns.length > 50 && i > 0 && i % 50 === 0) {
-                    console.log(
+                    logger.info(
                         `[${network.name}][${token.symbol}] Updated ${i}/${burns.length} in database...`,
                     );
                 }
@@ -63,7 +63,7 @@ const tick = async (
             }
             await database.setLatestBlock(network, token, currentBlock);
         };
-        await withTimeout(tokenTick(), 30 * MINUTES).catch(console.error);
+        await withTimeout(tokenTick(), 30 * MINUTES).catch(logger.error);
     }
 
     for (const token of network.tokens) {
@@ -73,6 +73,7 @@ const tick = async (
         logger.info(
             `[${network.name}][${token.symbol}] ${items.size} burns to check...`,
         );
+        logger.info("");
         for (const item of items.values()) {
             await withTimeout(
                 verifyBurn(
@@ -85,6 +86,7 @@ const tick = async (
                 ),
                 10 * MINUTES,
             ).catch(console.error);
+            logger.info("");
         }
     }
 };

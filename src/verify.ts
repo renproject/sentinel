@@ -12,6 +12,7 @@ import {
     StdTransaction,
 } from "./apis/btc";
 import { getZECTransactions } from "./apis/zec";
+import { extractError } from "./lib/extractError";
 import { timeAgo, timeDifference } from "./lib/naturalTime";
 import { reportError } from "./lib/sentry";
 import { ContractReader } from "./network/subzero";
@@ -31,8 +32,6 @@ export const verifyBurn = async (
     if (!contractReader.network) {
         return;
     }
-
-    console.log("");
 
     try {
         let address = Buffer.from(strip0x(item.address), "hex").toString();
@@ -76,7 +75,7 @@ export const verifyBurn = async (
                     await database.updateBurn(item);
                 }
             } else {
-                console.log(chalk.yellow(`[WARNING] ${errorMessage}`));
+                logger.info(chalk.yellow(`[WARNING] ${errorMessage}`));
                 item.ignored = true;
                 await database.updateBurn(item);
             }
@@ -85,7 +84,7 @@ export const verifyBurn = async (
 
         if (token.symbol === "BTC" && !/^[a-z0-9:_-]+$/i.exec(address)) {
             address = bs58.encode(Buffer.from(strip0x(item.address), "hex"));
-            console.log(`Updated address to ${address}`);
+            logger.info(`Updated address to ${address}`);
         }
 
         logger.info(
@@ -101,7 +100,7 @@ export const verifyBurn = async (
         if (target.lte(10000)) {
             item.received = true;
             await database.updateBurn(item);
-            console.log(`Skipping! Amount is ${target.toFixed()}`);
+            logger.info(`Skipping! Amount is ${target.toFixed()}`);
             return;
         }
 
@@ -142,7 +141,7 @@ export const verifyBurn = async (
                 } to ${address} - Unable to fetch transactions: ${
                     error.message
                 }`;
-                console.log(chalk.yellow(`[WARNING] ${errorMessage}`));
+                logger.info(chalk.yellow(`[WARNING] ${errorMessage}`));
                 item.ignored = true;
                 await database.updateBurn(item);
             }
@@ -157,7 +156,7 @@ export const verifyBurn = async (
         if (networkFees.release && target.lt(networkFees.release.plus(547))) {
             item.ignored = true;
             await database.updateBurn(item);
-            console.log(
+            logger.info(
                 chalk.yellow(
                     `[WARNING] Burn of ${target.toFixed()} is less than minimum: ${networkFees.release.plus(
                         547,
@@ -205,7 +204,7 @@ export const verifyBurn = async (
                     .times((10000 - networkFees.burn) / 10000)
                     .minus(utxo.balanceChange);
 
-                console.log(
+                logger.info(
                     `[DEBUG] Checking UTXO ${utxo.txHash.slice(
                         0,
                         6,
@@ -270,7 +269,7 @@ export const verifyBurn = async (
                     item.txHash = utxo.txHash;
                     item.received = true;
                     await database.updateBurn(item);
-                    console.log(
+                    logger.info(
                         chalk.green(
                             `[INFO] Found! ${
                                 utxo.balanceChange
@@ -298,10 +297,11 @@ export const verifyBurn = async (
         if (!item.received) {
             // Try submitting to RenVM once every 10 minutes.
             if (true || Math.floor(diffMinutes) % 1 === 0) {
-                console.log(
-                    `Submitting ${item.token} burn ${item.ref.toFixed()}`,
+                logger.info(
+                    `Submitting ${
+                        item.token.symbol
+                    } burn ${item.ref.toFixed()}`,
                 );
-                console.log("Burn hash:", item.burnHash);
                 contractReader
                     .submitBurn(
                         item.token,
@@ -310,7 +310,9 @@ export const verifyBurn = async (
                             ? item.burnHash || undefined
                             : undefined,
                     )
-                    .catch(console.error);
+                    .catch((error) =>
+                        logger.error(chalk.gray(extractError(error))),
+                    );
             }
 
             let errorMessage = `🔥🔥🔥 [burn-sentry] ${network.name.toLowerCase()} ${item.burnHash?.trim()} ${adjust(
@@ -344,11 +346,16 @@ export const verifyBurn = async (
                     await database.updateBurn(item);
                 }
             } else {
-                console.log(chalk.yellow(`[WARNING] ${errorMessage}`));
+                logger.info(chalk.yellow(`[WARNING] ${errorMessage}`));
             }
         }
     } catch (error: any) {
-        console.error(error);
-        logger.error(error);
+        logger.error(
+            chalk.red(
+                `Error checking ${token.symbol} tx #${item.ref}`,
+                extractError(error),
+                `(burn hash: ${item.burnHash})`,
+            ),
+        );
     }
 };
