@@ -8,6 +8,7 @@ export const sleep = async (ms: number) =>
     // tslint:disable-next-line: no-string-based-set-timeout
     new Promise((resolve) => setTimeout(resolve, ms));
 
+// Run a promise with a timeout so it doesn't hang forever.
 export const withTimeout = <T>(x: Promise<T>, timeout: number): Promise<T> =>
     Promise.race([
         x,

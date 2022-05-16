@@ -17,4 +17,12 @@ if (!parsed.DATABASE_URL) {
     );
 }
 
+export const LIGHTNODE_URL =
+    process.env.LIGHTNODE_URL || "https://rpc.renproject.io";
+
+// Logger config.
+export const LOG_DIR = "./log/";
+export const ERROR_LOG_FILE = "error.log";
+export const DEBUG_LOG_FILE = "debug.log";
+
 export const { INFURA_KEY, DATABASE_URL, PORT, SENTRY_DSN } = parsed;

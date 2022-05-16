@@ -9,8 +9,6 @@ import { Log } from "web3-core";
 import { sha3 } from "web3-utils";
 import { Logger } from "winston";
 
-import { extractError } from "../lib/extractError";
-import { reportError } from "../lib/sentry";
 import { Burn, Network, Token } from "../types/types";
 
 let web3s = Map<string, Web3>();
@@ -68,113 +66,6 @@ export class ContractReader {
         }
     };
 
-    public readonly getNewLogs = async (
-        network: Network,
-        token: Token,
-        blockNumberIn: BigNumber | string,
-    ) => {
-        if (!this.web3) {
-            throw new Error("Web3 not defined");
-        }
-
-        let fromBlock = new BigNumber(blockNumberIn);
-
-        let latestBlock = new BigNumber(
-            await this.web3.eth.getBlockNumber(),
-        ).minus(1);
-
-        if (fromBlock.isGreaterThan(latestBlock)) {
-            return { burns: [], currentBlock: fromBlock };
-        }
-
-        const gatewayAddress = await (
-            network.chain as Ethereum
-        ).getGatewayContractAddress(token.symbol);
-
-        let events: Log[] = [];
-
-        let batchesRemaining = 1;
-
-        let toBlock;
-
-        while (fromBlock.isLessThan(latestBlock) && batchesRemaining > 0) {
-            toBlock = BigNumber.min(
-                latestBlock,
-                fromBlock.plus(network.blockLimit),
-            );
-
-            const blocksBeingFetched = toBlock.minus(fromBlock);
-            const totalRemainingBlocks = latestBlock.minus(fromBlock);
-
-            this.logger.info(
-                `Getting new logs from ${fromBlock.toString()} to ${toBlock.toString()} (${blocksBeingFetched.toString()} of ${totalRemainingBlocks.toString()})`,
-            );
-
-            const newEvents = await this.web3.eth.getPastLogs({
-                address: gatewayAddress,
-                fromBlock: fromBlock.toString(),
-                toBlock: toBlock.toString(),
-                topics: [sha3("LogBurn(bytes,uint256,uint256,bytes)")],
-            });
-
-            events = events.concat(...(newEvents as Log[]));
-
-            fromBlock = toBlock.plus(1);
-            batchesRemaining -= 1;
-        }
-
-        if (events.length > 0) {
-            this.logger.info(
-                `[${network.name}][${token.symbol}] Got ${chalk.green(
-                    events.length,
-                )} events. Getting timestamps...`,
-            );
-        }
-
-        const burns: Burn[] = [];
-
-        for (let i = 0; i < events.length; i++) {
-            const event = events[i];
-            if (!this.web3) {
-                throw new Error("Web3 not defined");
-            }
-
-            const decoded = this.web3.eth.abi.decodeParameters(
-                ["bytes", "uint256"],
-                event.data,
-            );
-
-            if (i > 0 && i % 50 === 0) {
-                this.logger.info(
-                    `[${network.name}][${token.symbol}] Got timestamp ${i}/${events.length}...`,
-                );
-            }
-
-            const blocknumber = event.blockNumber;
-            const timestamp = new BigNumber(
-                (await this.web3.eth.getBlock(blocknumber)).timestamp,
-            ).toNumber();
-
-            const burn: Burn = {
-                ref: new BigNumber(event.topics[1] as string, 16),
-                network,
-                token,
-                amount: new BigNumber(decoded[1].toString()),
-                address: decoded[0],
-                received: false,
-                txHash: "",
-                burnHash: event.transactionHash,
-                timestamp,
-                sentried: false,
-                ignored: false,
-            };
-            // return burn;
-            burns.push(burn);
-        }
-
-        return { burns, currentBlock: toBlock || fromBlock };
-    };
-
     getReleaseFees = async (
         sendToken: Token,
     ): Promise<{ release: BigNumber | undefined; burn: number }> => {
@@ -189,8 +80,8 @@ export class ContractReader {
         });
 
         return {
-            release: fees.release,
-            burn: fees.burn,
+            release: fees.fixedFee,
+            burn: fees.variableFee,
         };
     };
 
@@ -228,8 +119,7 @@ export class ContractReader {
                     trace: (...m: unknown[]) =>
                         this.logger.debug(chalk.gray(m)),
                 },
-                useV2TransactionFormat: true,
-            }).burnAndRelease({
+            }).gateway({
                 asset: sendToken.symbol,
                 from: this.network.chain,
                 to: {
