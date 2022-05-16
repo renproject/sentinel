@@ -252,7 +252,7 @@ export const transactionUpdaterService = (
                                     colors.red(
                                         `Unable to submit ${submitter.tx.hash}:`,
                                     ),
-                                    error,
+                                    errorInner,
                                 );
                                 logger.debug(
                                     JSON.stringify(
