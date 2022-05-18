@@ -17,6 +17,7 @@ import * as Sentry from "@sentry/node";
 import BigNumber from "bignumber.js";
 import bs58 from "bs58";
 import chalk from "chalk";
+import express from "express";
 import { install as loadSourceMaps } from "source-map-support";
 import { Connection } from "typeorm";
 import { Logger } from "winston";
@@ -30,6 +31,8 @@ import { createLogger, printChain } from "./lib/logger";
 import { MINUTES, sleep, withTimeout } from "./lib/misc";
 
 loadSourceMaps();
+
+const app = express();
 
 // LOOP_INTERVAL defines how long the bot sleeps for in between checking for
 // trade opportunities.
@@ -116,41 +119,43 @@ export const blockchainSyncerService = (
                     }
                 }
 
-                // if (iteration % 10 === 0) {
-                //     const transactions = await transactionRepository.find({
-                //         where: {
-                //             done: false,
-                //             sentried: false,
-                //             ignored: false,
-                //         },
-                //         // order: {
-                //         //     created_at: "desc",
-                //         // },
-                //     });
+                if (iteration % 10 === 0) {
+                    const transactions = await transactionRepository.find({
+                        where: {
+                            done: false,
+                            sentried: false,
+                            ignored: false,
+                        },
+                        // order: {
+                        //     created_at: "desc",
+                        // },
+                    });
 
-                //     if (transactions.length > 0) {
-                //         logger.info(
-                //             `[renvm-tx] ${chalk.yellow(
-                //                 transactions.length,
-                //             )} transactions to process.`,
-                //         );
-                //     }
+                    if (transactions.length > 0) {
+                        logger.info(
+                            `[renvm-tx] ${chalk.yellow(
+                                transactions.length,
+                            )} transactions to process.`,
+                        );
+                    }
 
-                //     for (const transaction of transactions) {
-                //         const updatedTransaction = await submitTransaction(
-                //             transaction,
-                //             renJS,
-                //             chains,
-                //             logger,
-                //             database,
-                //         );
-                //         if (updatedTransaction) {
-                //             await transactionRepository.save(
-                //                 updatedTransaction,
-                //             );
-                //         }
-                //     }
-                // }
+                    for (const transaction of transactions) {
+                        const updatedTransaction = await submitTransaction(
+                            transaction,
+                            renJS,
+                            chains,
+                            logger,
+                            database,
+                        );
+                        if (updatedTransaction) {
+                            await transactionRepository.save(
+                                updatedTransaction,
+                            );
+                        }
+                    }
+                }
+
+                await sleep(LOOP_INTERVAL);
             }
         },
     };
@@ -468,6 +473,8 @@ export const main = async (_args: readonly string[]) => {
     //     console.error(error);
     //     process.exit(1);
     // });
+
+    app.listen(process.env.PORT);
 };
 
 main(process.argv.slice(2)).catch((error) => console.error(error));
