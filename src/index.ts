@@ -1,40 +1,33 @@
 import "reflect-metadata";
 
-import {
-    RenVMCrossChainTransaction,
-    RenVMProvider,
-    RenVMTransactionWithStatus,
-} from "@renproject/provider";
+import { RenVMProvider } from "@renproject/provider";
 import RenJS from "@renproject/ren";
 import { RenVMCrossChainTxSubmitter } from "@renproject/ren/build/main/renVMTxSubmitter";
 import {
-    ChainTransactionProgress,
     ChainTransactionStatus,
+    decodeRenVMSelector,
     generateGHash,
     generateNHash,
     generatePHash,
     generateSHash,
     RenNetwork,
-    TxStatus,
     utils,
 } from "@renproject/utils";
 import * as Sentry from "@sentry/node";
 import BigNumber from "bignumber.js";
+import bs58 from "bs58";
+import chalk from "chalk";
 import { install as loadSourceMaps } from "source-map-support";
 import { Connection } from "typeorm";
 import { Logger } from "winston";
 
-import { createLogger } from "./adapters/logger";
 import { LIGHTNODE_URL, SENTRY_DSN } from "./config";
 import { connectDatabase } from "./db";
 import { Chain } from "./db/entities/Chain";
 import { Transaction } from "./db/entities/Transaction";
 import { ChainDetails, Chains, initializeChains } from "./lib/chains";
-import { colors, printChain } from "./lib/logger";
+import { createLogger, printChain } from "./lib/logger";
 import { MINUTES, sleep, withTimeout } from "./lib/misc";
-
-// import { ContractReader } from "./network/subzero";
-// import { verifyBurn } from "./verify";
 
 loadSourceMaps();
 
@@ -44,10 +37,11 @@ const minute = 60 * 1000;
 const LOOP_INTERVAL = 1 * minute;
 
 const syncChainTransactions = async (
-    chains: Chains,
+    renJS: RenJS,
     chain: ChainDetails,
-    logger: Logger,
+    chains: Chains,
     database: Connection,
+    logger: Logger,
 ) => {
     if (!chain.getLogs) {
         return;
@@ -58,35 +52,39 @@ const syncChainTransactions = async (
         chain: chain.chain.chain,
     });
 
-    const fromBlock = chainStorage.synced_height
-        ? new BigNumber(chainStorage.synced_height).plus(1)
-        : null;
-
-    const { burns, currentBlock } = await withTimeout(
-        chain.getLogs(fromBlock),
-        20 * MINUTES,
+    let txs: Transaction[] = [];
+    // for (let i = 0; i < 10; i++) {
+    const { transactions, newState } = await chain.getLogs(
+        chainStorage.synced_state,
+        chains,
     );
 
-    logger.info(
-        `[${printChain(chain.chain.chain)}] Got ${
-            burns.length
-        } burns from block #${
-            fromBlock
-                ? fromBlock.toString()
-                : currentBlock.toString().toString()
-        } (${
-            fromBlock ? currentBlock.minus(fromBlock).toString() : "1"
-        } blocks)`,
-    );
+    chainStorage.synced_state = newState;
+    txs = [...txs, ...transactions];
+    // }
+    await database.manager.save([chainStorage, ...txs]);
 
-    chainStorage.synced_height = currentBlock.toFixed();
-    await database.manager.save([chainStorage, ...burns]);
+    // (async () => {
+    for (const transaction of txs) {
+        const updatedTransaction = await submitTransaction(
+            transaction,
+            renJS,
+            chains,
+            logger,
+            database,
+        );
+        if (updatedTransaction) {
+            await database.manager.save(updatedTransaction);
+        }
+    }
+    // })().catch(logger.error);
 };
 
 export const blockchainSyncerService = (
+    renJS: RenJS,
     chains: Chains,
-    logger: Logger,
     database: Connection,
+    logger: Logger,
 ) => {
     return {
         start: async () => {
@@ -94,201 +92,316 @@ export const blockchainSyncerService = (
                 (chain) => chain.getLogs,
             );
 
+            const transactionRepository = await database.getRepository(
+                Transaction,
+            );
+
             // Run tactic every 30 seconds
-            while (true) {
+            for (let iteration = 0; ; iteration++) {
                 for (const chainDetails of mintChains) {
                     try {
                         await withTimeout(
                             syncChainTransactions(
-                                chains,
+                                renJS,
                                 chainDetails,
-                                logger,
+                                chains,
                                 database,
+                                logger,
                             ),
-                            30 * MINUTES,
+                            5 * MINUTES,
                         );
                     } catch (error: any) {
                         console.error(error);
-                        logger.error(colors.red(error.message));
+                        logger.error(chalk.red(error.message));
                     }
                 }
-                // await sleep(LOOP_INTERVAL);
+
+                // if (iteration % 10 === 0) {
+                //     const transactions = await transactionRepository.find({
+                //         where: {
+                //             done: false,
+                //             sentried: false,
+                //             ignored: false,
+                //         },
+                //         // order: {
+                //         //     created_at: "desc",
+                //         // },
+                //     });
+
+                //     if (transactions.length > 0) {
+                //         logger.info(
+                //             `[renvm-tx] ${chalk.yellow(
+                //                 transactions.length,
+                //             )} transactions to process.`,
+                //         );
+                //     }
+
+                //     for (const transaction of transactions) {
+                //         const updatedTransaction = await submitTransaction(
+                //             transaction,
+                //             renJS,
+                //             chains,
+                //             logger,
+                //             database,
+                //         );
+                //         if (updatedTransaction) {
+                //             await transactionRepository.save(
+                //                 updatedTransaction,
+                //             );
+                //         }
+                //     }
+                // }
             }
         },
     };
 };
 
-export const transactionUpdaterService = (
+const submitTransaction = async (
+    transaction: Transaction,
+    renJS: RenJS,
     chains: Chains,
     logger: Logger,
     database: Connection,
+): Promise<Transaction | null> => {
+    try {
+        const {
+            asset,
+            fromTxHash,
+            fromTxIndex,
+            amount,
+            toRecipient,
+            fromChain,
+        } = transaction;
+        const payload = transaction.toPayload
+            ? utils.fromBase64(transaction.toPayload)
+            : Buffer.from([]);
+        const nonce = utils.fromBase64(transaction.nonce);
+        const originChain = Object.values(chains).find((ch) =>
+            Object.values(ch.chain.assets).includes(transaction.asset),
+        );
+        const toChain: string | undefined =
+            transaction.toChain || (originChain && originChain.chain.chain);
+        const from = chains[fromChain];
+        const to = toChain ? chains[toChain] : undefined;
+        if (!from) {
+            logger.error(`No from chain.`);
+            return null;
+        }
+        if (!to) {
+            logger.error(`No to chain.`);
+            return null;
+        }
+        if (!originChain) {
+            logger.error(`No origin chain.`);
+            return null;
+        }
+
+        const txid = from.chain.txHashToBytes(fromTxHash);
+
+        let toAddress;
+        let toAddressBytes;
+        try {
+            const utf8Address = Buffer.from(
+                utils.fromBase64(toRecipient),
+            ).toString();
+            if (to.chain.validateAddress(utf8Address)) {
+                toAddress = utf8Address;
+            } else {
+                const bytesAddress = to.chain.addressFromBytes(
+                    utils.fromBase64(toRecipient),
+                );
+                if (to.chain.validateAddress(bytesAddress)) {
+                    toAddress = bytesAddress;
+                } else {
+                    const base58Address = bs58
+                        .decode(
+                            Buffer.from(
+                                utils.fromBase64(toRecipient),
+                            ).toString(),
+                        )
+                        .toString();
+                    if (to.chain.validateAddress(base58Address)) {
+                        toAddress = base58Address;
+                        transaction.toRecipient = utils.toURLBase64(
+                            Buffer.from(toAddress),
+                        );
+                    } else {
+                        throw new Error(`Unknown format.`);
+                    }
+                }
+            }
+            toAddressBytes = to.chain.addressToBytes(toAddress);
+        } catch (error) {
+            throw new Error(
+                `Unable to decode ${
+                    to.chain.chain
+                } address '${toRecipient}': ${utils.extractError(error)}`,
+            );
+        }
+
+        const nhash = generateNHash(nonce, txid, fromTxIndex);
+        const phash = generatePHash(payload);
+        const shash = generateSHash(`${asset}/to${to.chain.chain}`);
+        const ghash = generateGHash(phash, shash, toAddressBytes, nonce);
+
+        let selector: string;
+        if (originChain.chain.chain === to.chain.chain) {
+            selector = `${asset}/from${from.chain.chain}`;
+        } else if (originChain.chain.chain === from.chain.chain) {
+            selector = `${asset}/to${to.chain.chain}`;
+        } else {
+            selector = `${asset}/from${from.chain.chain}_to${to.chain.chain}`;
+        }
+
+        const submitter = new RenVMCrossChainTxSubmitter(
+            renJS.provider,
+            selector,
+            {
+                txid,
+                txindex: new BigNumber(fromTxIndex),
+                amount: new BigNumber(amount),
+                payload,
+                phash,
+                to: toAddress,
+                nonce,
+                nhash,
+                gpubkey: Buffer.from([]),
+                ghash,
+            },
+        );
+
+        transaction.renVmHash = submitter.tx.hash;
+
+        try {
+            await submitter.query();
+        } catch (error: any) {
+            if (
+                submitter.progress?.status !== ChainTransactionStatus.Reverted
+            ) {
+                try {
+                    await submitter.submit();
+                    if (/not found$/.exec(error.message)) {
+                        logger.info(
+                            `[renvm-tx] Submitted ${chalk.yellow(
+                                submitter.tx.hash,
+                            )}!`,
+                        );
+                    }
+                    void utils
+                        .POST(
+                            "https://validate-mint.herokuapp.com/",
+                            JSON.stringify({
+                                app: "burn-sentry",
+                                hash: submitter.tx.hash,
+                            }),
+                        )
+                        .catch(() => {
+                            /* Ignore error. */
+                        });
+                    try {
+                        await submitter.query();
+                    } catch (error) {
+                        logger.error(
+                            chalk.red(
+                                `Unable to query ${submitter.tx.hash} after submitting:`,
+                            ),
+                            error,
+                        );
+                        logger.debug(
+                            JSON.stringify(submitter.export(), null, "    "),
+                        );
+                    }
+                } catch (errorInner) {
+                    logger.error(
+                        chalk.red(`Unable to submit ${submitter.tx.hash}:`),
+                        errorInner,
+                    );
+                    logger.debug(
+                        JSON.stringify(submitter.export(), null, "    "),
+                    );
+                }
+            }
+        }
+        if (submitter.progress) {
+            {
+                const { asset, from, to } = decodeRenVMSelector(
+                    selector,
+                    originChain.chain.chain || "",
+                );
+                logger.info(
+                    `[renvm-tx] ${printChain(from)}->${asset}->${printChain(
+                        to,
+                    )} ${chalk.yellow(submitter.tx.hash)}: ${chalk.green(
+                        submitter.progress.status,
+                    )}`,
+                );
+            }
+            if (
+                submitter.progress.status === ChainTransactionStatus.Done ||
+                submitter.progress.status === ChainTransactionStatus.Reverted
+            ) {
+                transaction.done = true;
+                if (submitter.progress.response?.tx.out?.txid) {
+                    transaction.toTxHash = to.chain.txHashFromBytes(
+                        submitter.progress.response.tx.out.txid,
+                    );
+                }
+                return transaction;
+            }
+        }
+    } catch (error) {
+        logger.error(
+            chalk.red(
+                `[renvm-tx] Error processing ${transaction.asset} ${transaction.fromChain} transaction ${transaction.fromTxHash}:`,
+            ),
+            error,
+        );
+    }
+    return null;
+};
+
+export const transactionUpdaterService = (
+    renJS: RenJS,
+    chains: Chains,
+    database: Connection,
+    logger: Logger,
 ) => {
     return {
         start: async () => {
-            const renJS = new RenJS("mainnet");
             const transactionRepository = await database.getRepository(
                 Transaction,
             );
 
             while (true) {
-                const transactions = await transactionRepository.findBy({
-                    done: false,
-                    sentried: false,
-                    ignored: false,
+                const transactions = await transactionRepository.find({
+                    where: {
+                        done: false,
+                        sentried: false,
+                        ignored: false,
+                    },
+                    // order: {
+                    //     created_at: "desc",
+                    // },
                 });
 
+                if (transactions.length > 0) {
+                    logger.info(
+                        `${chalk.yellow(
+                            transactions.length,
+                        )} transactions to process.`,
+                    );
+                }
+
                 for (const transaction of transactions) {
-                    try {
-                        const {
-                            asset,
-                            fromTxHash,
-                            fromTxIndex,
-                            amount,
-                            toRecipient,
-                            fromChain,
-                        } = transaction;
-                        const payload = transaction.toPayload
-                            ? utils.fromBase64(transaction.toPayload)
-                            : Buffer.from([]);
-                        const nonce = utils.fromBase64(transaction.nonce);
-                        const originChain = Object.values(chains).find((ch) =>
-                            Object.values(ch.chain.assets).includes(
-                                transaction.asset,
-                            ),
-                        );
-                        const toChain: string | undefined =
-                            transaction.toChain ||
-                            (originChain && originChain.chain.chain);
-                        const from = chains[fromChain];
-                        const to = toChain ? chains[toChain] : undefined;
-                        if (!from) {
-                            logger.error(`No from chain.`);
-                            continue;
-                        }
-                        if (!to) {
-                            logger.error(`No to chain.`);
-                            continue;
-                        }
-
-                        const txid = utils.fromBase64(fromTxHash);
-
-                        const nhash = generateNHash(nonce, txid, fromTxIndex);
-                        const phash = generatePHash(payload);
-                        const shash = generateSHash(
-                            `${asset}/to${to.chain.chain}`,
-                        );
-                        const ghash = generateGHash(
-                            phash,
-                            shash,
-                            to.chain.addressToBytes(toRecipient),
-                            nonce,
-                        );
-
-                        const selector = `${asset}/from${fromChain}${
-                            originChain && originChain.chain.chain !== toChain
-                                ? `_to${toChain}`
-                                : ""
-                        }`;
-
-                        const submitter = new RenVMCrossChainTxSubmitter(
-                            renJS.provider,
-                            selector,
-                            {
-                                txid,
-                                txindex: new BigNumber(fromTxIndex),
-                                amount: new BigNumber(amount),
-                                payload,
-                                phash,
-                                to: toRecipient,
-                                nonce,
-                                nhash,
-                                gpubkey: Buffer.from([]),
-                                ghash,
-                            },
-                        );
-
-                        let result:
-                            | (ChainTransactionProgress & {
-                                  response?:
-                                      | RenVMTransactionWithStatus<RenVMCrossChainTransaction>
-                                      | undefined;
-                              })
-                            | undefined = undefined;
-                        try {
-                            result = await submitter.query();
-                        } catch (error) {
-                            try {
-                                await submitter.submit();
-                                void utils
-                                    .POST(
-                                        "https://validate-mint.herokuapp.com/",
-                                        JSON.stringify({
-                                            app: "burn-sentry",
-                                            hash: submitter.tx.hash,
-                                        }),
-                                    )
-                                    .catch(() => {
-                                        /* Ignore error. */
-                                    });
-                                try {
-                                    result = await submitter.query();
-                                } catch (error) {
-                                    logger.error(
-                                        colors.red(
-                                            `Unable to query ${submitter.tx.hash} after submitting:`,
-                                        ),
-                                        error,
-                                    );
-                                    logger.debug(
-                                        JSON.stringify(
-                                            submitter.export(),
-                                            null,
-                                            "    ",
-                                        ),
-                                    );
-                                }
-                            } catch (errorInner) {
-                                logger.error(
-                                    colors.red(
-                                        `Unable to submit ${submitter.tx.hash}:`,
-                                    ),
-                                    errorInner,
-                                );
-                                logger.debug(
-                                    JSON.stringify(
-                                        submitter.export(),
-                                        null,
-                                        "    ",
-                                    ),
-                                );
-                            }
-                        }
-                        if (result) {
-                            logger.info(
-                                `${selector} ${colors.yellow(
-                                    submitter.tx.hash,
-                                )}: ${colors.green(result.status)}`,
-                            );
-                            if (
-                                result.status === ChainTransactionStatus.Done ||
-                                result.status ===
-                                    ChainTransactionStatus.Reverted
-                            ) {
-                                transaction.done = true;
-                                await transactionRepository.save(transaction);
-                            }
-                        }
-                    } catch (error) {
-                        logger.error(
-                            colors.red(
-                                `Error processing transaction ${transaction.fromTxHash}:`,
-                            ),
-                            error,
-                        );
-                        logger.debug(
-                            transaction.fromTxHash,
-                            transaction.fromChain,
-                        );
+                    const updatedTransaction = await submitTransaction(
+                        transaction,
+                        renJS,
+                        chains,
+                        logger,
+                        database,
+                    );
+                    if (updatedTransaction) {
+                        await transactionRepository.save(updatedTransaction);
                     }
                 }
 
@@ -330,12 +443,20 @@ export const main = async (_args: readonly string[]) => {
 
     const chains = await initializeChains(network, logger);
 
-    const blockchainSyncer = blockchainSyncerService(chains, logger, database);
+    const renJS = new RenJS("mainnet");
+
+    const blockchainSyncer = blockchainSyncerService(
+        renJS,
+        chains,
+        database,
+        logger,
+    );
 
     const transactionUpdater = transactionUpdaterService(
+        renJS,
         chains,
-        logger,
         database,
+        logger,
     );
 
     blockchainSyncer.start().catch((error) => {
@@ -343,10 +464,10 @@ export const main = async (_args: readonly string[]) => {
         process.exit(1);
     });
 
-    transactionUpdater.start().catch((error) => {
-        console.error(error);
-        process.exit(1);
-    });
+    // transactionUpdater.start().catch((error) => {
+    //     console.error(error);
+    //     process.exit(1);
+    // });
 };
 
 main(process.argv.slice(2)).catch((error) => console.error(error));

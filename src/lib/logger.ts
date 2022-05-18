@@ -3,7 +3,7 @@ import winston from "winston";
 
 import { DEBUG_LOG_FILE, ERROR_LOG_FILE, LOG_DIR } from "../config";
 
-export const defaultLogger = () => {
+export const createLogger = () => {
     return winston.createLogger({
         level: "debug",
         defaultMeta: {},

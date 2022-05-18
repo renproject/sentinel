@@ -20,8 +20,8 @@ export class Chain {
     })
     chain!: string;
 
-    @Column({ type: "bigint", nullable: true })
-    synced_height!: string | null;
+    @Column("varchar")
+    synced_state!: string;
 
     @Column()
     @CreateDateColumn()
@@ -31,11 +31,11 @@ export class Chain {
     @UpdateDateColumn()
     updated_at!: Date;
 
-    constructor(params: { chain: string; synced_height: string | null }) {
+    constructor(params: { chain: string; synced_state: string }) {
         if (!params) {
             return;
         }
         this.chain = params.chain;
-        this.synced_height = params.synced_height;
+        this.synced_state = params.synced_state;
     }
 }

@@ -5,10 +5,12 @@ import {
     CreateDateColumn,
     Entity,
     PrimaryGeneratedColumn,
+    Unique,
     UpdateDateColumn,
 } from "typeorm";
 
 @Entity("transactions")
+@Unique("event", ["fromTxHash", "fromTxIndex"])
 export class Transaction {
     @PrimaryGeneratedColumn()
     id!: number;
@@ -21,16 +23,13 @@ export class Transaction {
     @Column({ nullable: false })
     fromTxHash!: string;
 
-    @Column({ nullable: false, type: "bigint" })
+    @Column({ nullable: false, type: "varchar" })
     fromTxIndex!: string;
-
-    @Column({ nullable: false, type: "bigint" })
-    fromTxTimestamp!: string;
 
     @Column({ nullable: false })
     nonce!: string;
 
-    @Column({ nullable: false, type: "bigint" })
+    @Column({ nullable: false, type: "varchar" })
     amount!: string;
 
     @Column({ nullable: false })
@@ -74,7 +73,6 @@ export class Transaction {
         asset: string;
         fromTxHash: string;
         fromTxIndex: string;
-        fromTxTimestamp: string;
         nonce: string;
         amount: string;
         toRecipient: string;
@@ -83,9 +81,9 @@ export class Transaction {
         toPayload: string | null;
         toTxHash: string | null;
         renVmHash: string | null;
-        done: boolean;
-        sentried: boolean;
-        ignored: boolean;
+        done?: boolean;
+        sentried?: boolean;
+        ignored?: boolean;
     }) {
         if (!params) {
             return;
@@ -93,7 +91,6 @@ export class Transaction {
         this.asset = params.asset;
         this.fromTxHash = params.fromTxHash;
         this.fromTxIndex = params.fromTxIndex;
-        this.fromTxTimestamp = params.fromTxTimestamp;
         this.nonce = params.nonce;
         this.amount = params.amount;
         this.toRecipient = params.toRecipient;
@@ -102,8 +99,8 @@ export class Transaction {
         this.toPayload = params.toPayload;
         this.toTxHash = params.toTxHash;
         this.renVmHash = params.renVmHash;
-        this.done = params.done;
-        this.sentried = params.sentried;
-        this.ignored = params.ignored;
+        this.done = params.done || false;
+        this.sentried = params.sentried || false;
+        this.ignored = params.ignored || false;
     }
 }

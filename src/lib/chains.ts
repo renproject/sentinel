@@ -16,22 +16,21 @@ import {
     Zcash,
 } from "@renproject/chains";
 import { EthereumBaseChain } from "@renproject/chains-ethereum/build/main/base";
-import { resolveNetwork } from "@renproject/chains-solana/build/main/networks";
 import { Chain, ChainCommon, RenNetwork } from "@renproject/utils";
-import BigNumber from "bignumber.js";
 import { ethers } from "ethers";
 import { Logger } from "winston";
 
 import { INFURA_KEY } from "../config";
 import { Transaction } from "../db/entities/Transaction";
-import { getEVMLogs, getEVMPayload } from "./evm";
+import { getEVMLogs } from "./chainHandlers/evm";
+import { getSolanaLogs } from "./chainHandlers/solana";
 
-export interface ChainDetails {
+export interface ChainDetails<State = any> {
     chain: Chain;
     getLogs?: (
-        fromHeight: BigNumber | null,
-    ) => Promise<{ burns: Transaction[]; currentBlock: BigNumber }>;
-    getPayload?: (txHash: string) => Promise<{ chain: string }>;
+        synced_state: State,
+        chains: Chains,
+    ) => Promise<{ transactions: Transaction[]; newState: State }>;
 }
 
 export const initializeChain = <T extends ChainCommon>(
@@ -93,7 +92,6 @@ export const initializeChain = <T extends ChainCommon>(
         case Solana.chain: {
             return new (Chain as unknown as typeof Solana)({
                 network,
-                provider: resolveNetwork(network).endpoint,
             }) as ChainCommon as T;
         }
 
@@ -103,11 +101,20 @@ export const initializeChain = <T extends ChainCommon>(
     }
 };
 
+const maxConfirmations = {
+    Arbitrum: "18446744073709551615",
+    Avalanche: "1500000",
+    BinanceSmartChain: "2000000",
+    Ethereum: "500000",
+    Fantom: "6500000",
+    Polygon: "3000000",
+};
+
 const EVMChain = <C extends typeof EthereumBaseChain>(
     chainClass: C,
     network: RenNetwork,
     logger: Logger,
-) => {
+): ChainDetails<string> => {
     const chain: EthereumBaseChain = initializeChain(
         chainClass,
         network,
@@ -115,9 +122,27 @@ const EVMChain = <C extends typeof EthereumBaseChain>(
     );
     return {
         chain,
-        getLogs: (fromHeight: BigNumber | null) =>
-            getEVMLogs(chain, network, fromHeight, logger),
-        getPayload: (txHash: string) => getEVMPayload(chain, txHash),
+        getLogs: (syncedState: string) =>
+            getEVMLogs(
+                chain,
+                network,
+                syncedState,
+                maxConfirmations[chain.chain],
+                logger,
+            ),
+    };
+};
+
+const SolanaChain = <C extends typeof Solana>(
+    chainClass: C,
+    network: RenNetwork,
+    logger: Logger,
+): ChainDetails<string> => {
+    const chain: Solana = initializeChain(chainClass, network, logger);
+    return {
+        chain,
+        getLogs: (syncedState: string, chains: Chains) =>
+            getSolanaLogs(chain, network, syncedState, chains, logger),
     };
 };
 
@@ -158,9 +183,7 @@ export const initializeChains = (
     Polygon: EVMChain(Polygon, network, logger),
 
     // Solana
-    Solana: {
-        chain: initializeChain(Solana, network, logger),
-    },
+    Solana: SolanaChain(Solana, network, logger),
 });
 
 export type Chains = ReturnType<typeof initializeChains>;
