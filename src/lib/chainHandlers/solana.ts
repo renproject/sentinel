@@ -13,7 +13,7 @@ import { Logger } from "winston";
 import { Transaction } from "../../db/entities/Transaction";
 import { Chains } from "../chains";
 import { printChain } from "../logger";
-import { SECONDS, withTimeout } from "../misc";
+import { withTimeout } from "../misc";
 import pLimit from "./pLimit";
 
 const throttle = pLimit(3);
@@ -98,7 +98,7 @@ export const getSolanaLogs = async <C extends Solana>(
                                 new PublicKey(gateways[asset]),
                                 nextNonce,
                             ),
-                            10 * SECONDS,
+                            10 * utils.sleep.SECONDS,
                         ),
                 );
 
