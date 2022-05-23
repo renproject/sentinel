@@ -26,6 +26,8 @@ import { withTimeout } from "../../lib/misc";
 // trade opportunities.
 const LOOP_INTERVAL = 1 * utils.sleep.MINUTES;
 
+const TRANSACTION_SENTRY_DELAY = 60 * utils.sleep.MINUTES;
+
 /**
  * Check whether a RenVM transaction has been submitted. If not, submit it.
  */
@@ -165,17 +167,6 @@ const submitTransaction = async (
                             )}!`,
                         );
                     }
-                    void utils
-                        .POST(
-                            "https://validate-mint.herokuapp.com/",
-                            JSON.stringify({
-                                app: "burn-sentry",
-                                hash: submitter.tx.hash,
-                            }),
-                        )
-                        .catch(() => {
-                            /* Ignore error. */
-                        });
                     try {
                         await submitter.query();
                     } catch (error) {
@@ -198,12 +189,14 @@ const submitTransaction = async (
                         JSON.stringify(submitter.export(), null, "    "),
                     );
 
+                    // If the transaction is older than TRANSACTION_SENTRY_DELAY,
+                    // and hasn't been completed or sentried yet, report an
+                    // error to Sentry.
                     const timePassed =
                         (transaction.created_at.getTime() - Date.now()) / 1000;
-
                     if (
                         transaction.sentried === false &&
-                        timePassed > 1 * utils.sleep.MINUTES * 60
+                        timePassed > TRANSACTION_SENTRY_DELAY
                     ) {
                         let decimals = 0;
                         try {
@@ -214,7 +207,7 @@ const submitTransaction = async (
                             // Ignore
                         }
                         reportError(
-                            `🔥🔥🔥 [burn-sentry][${
+                            `🔥🔥🔥 [sentinel][${
                                 transaction.fromChain
                             }] ${transaction.fromTxHash.trim()} ${new BigNumber(
                                 transaction.amount,
@@ -331,11 +324,11 @@ export const blockchainSyncerService = (
                 const checkSentriedTxs = iteration % SENTRIED_TX_CHECK === 0;
 
                 if (checkPendingTxs) {
+                    // Fetch transactions that aren't marked done.
+                    // Only filter sentried txs if `checkSentriedTxs` is false.
                     const transactions = await transactionRepository.find({
                         where: {
                             done: false,
-                            // Only filter sentried txs if `checkSentriedTxs` is
-                            // false.
                             sentried: checkSentriedTxs ? undefined : false,
                             ignored: false,
                         },
@@ -366,6 +359,7 @@ export const blockchainSyncerService = (
                     }
                 }
 
+                // Fetch new events.
                 for (const chainDetails of mintChains) {
                     try {
                         await withTimeout(

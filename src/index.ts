@@ -2,7 +2,7 @@ import "reflect-metadata";
 
 import { RenVMProvider } from "@renproject/provider";
 import RenJS from "@renproject/ren";
-import { RenNetwork } from "@renproject/utils";
+import { RenNetwork, utils } from "@renproject/utils";
 import * as Sentry from "@sentry/node";
 import { install as loadSourceMaps } from "source-map-support";
 
@@ -34,7 +34,11 @@ const main = async (_args: readonly string[]) => {
     });
 
     const provider = await new RenVMProvider(LIGHTNODE_URL);
-    const network = (await provider.getNetwork()) as RenNetwork;
+    const network = (await utils.tryNTimes(
+        () => provider.getNetwork(),
+        5,
+        10 * utils.sleep.SECONDS,
+    )) as RenNetwork;
     const chains = await initializeChains(network, logger);
     const renJS = new RenJS("mainnet");
 

@@ -187,7 +187,7 @@ export const getEVMLogs = async <C extends EthereumBaseChain>(
             transactions.push(burn);
         } catch (error) {
             reportError(
-                `[burn-sentry][internal] Skipping ${chain.chain} log ${
+                `[sentinel][internal] Skipping ${chain.chain} log ${
                     event.transactionHash
                 }: ${utils.extractError(error)}`,
             );
@@ -239,7 +239,7 @@ export const getEVMLogs = async <C extends EthereumBaseChain>(
             transactions.push(burn);
         } catch (error: any) {
             reportError(
-                `[burn-sentry][internal] Skipping ${chain.chain} log ${
+                `[sentinel][internal] Skipping ${chain.chain} log ${
                     event.transactionHash
                 }: ${utils.extractError(error)}`,
             );
@@ -273,7 +273,7 @@ export const getEVMLogs = async <C extends EthereumBaseChain>(
                 continue;
             }
 
-            const burn = new Transaction({
+            const lock = new Transaction({
                 asset: asset.replace(/^ren/, ""),
                 fromTxHash: event.transactionHash,
                 fromTxIndex: "0",
@@ -288,10 +288,10 @@ export const getEVMLogs = async <C extends EthereumBaseChain>(
                 toTxHash: null,
                 renVmHash: null,
             });
-            transactions.push(burn);
+            transactions.push(lock);
         } catch (error: any) {
             reportError(
-                `[burn-sentry][internal] Skipping ${chain.chain} log ${
+                `[sentinel][internal] Skipping ${chain.chain} log ${
                     event.transactionHash
                 }: ${utils.extractError(error)}`,
             );

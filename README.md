@@ -1,6 +1,6 @@
-# `🔥 burn-sentry`
+# `🦅 sentinel`
 
-Logs any burns that haven't received their funds correctly.
+Sentinel monitors on-chain transactions for RenVM events and ensures that they get processed by RenVM.
 
 ## Development
 
@@ -17,7 +17,7 @@ INFURA_KEY="..."
 DATABASE_URL="postgres://..."
 ```
 
-Start `🔥 burn-sentry`:
+Start `🔥 sentinel`:
 
 ```sh
 yarn start

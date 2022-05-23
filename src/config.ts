@@ -1,9 +1,7 @@
 import { config } from "dotenv";
 
 const result = config();
-if (result.error) {
-    console.error(result.error);
-}
+// Ignore result.error
 
 const parsed = { ...process.env, ...(result.parsed || {}) };
 
