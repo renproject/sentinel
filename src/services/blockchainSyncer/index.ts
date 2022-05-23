@@ -188,38 +188,10 @@ const submitTransaction = async (
                     logger.debug(
                         JSON.stringify(submitter.export(), null, "    "),
                     );
-
-                    // If the transaction is older than TRANSACTION_SENTRY_DELAY,
-                    // and hasn't been completed or sentried yet, report an
-                    // error to Sentry.
-                    const timePassed =
-                        (transaction.created_at.getTime() - Date.now()) / 1000;
-                    if (
-                        transaction.sentried === false &&
-                        timePassed > TRANSACTION_SENTRY_DELAY
-                    ) {
-                        let decimals = 0;
-                        try {
-                            decimals = await from.chain.assetDecimals(
-                                transaction.asset,
-                            );
-                        } catch (error) {
-                            // Ignore
-                        }
-                        reportError(
-                            `🔥🔥🔥 [sentinel][${
-                                transaction.fromChain
-                            }] ${transaction.fromTxHash.trim()} ${new BigNumber(
-                                transaction.amount,
-                            )
-                                .shiftedBy(-decimals)
-                                .toFixed()} ${transaction.asset}`,
-                        );
-                        transaction.sentried = true;
-                    }
                 }
             }
         }
+
         if (submitter.progress) {
             {
                 const { asset, from, to } = decodeRenVMSelector(
@@ -244,9 +216,39 @@ const submitTransaction = async (
                         submitter.progress.response.tx.out.txid,
                     );
                 }
-                return transaction;
             }
         }
+
+        // If the transaction is older than TRANSACTION_SENTRY_DELAY,
+        // and hasn't been completed or sentried yet, report an
+        // error to Sentry.
+        const timePassed =
+            (transaction.created_at.getTime() - Date.now()) / 1000;
+        if (
+            timePassed > TRANSACTION_SENTRY_DELAY &&
+            transaction.sentried === false &&
+            transaction.done === false &&
+            transaction.ignored === false
+        ) {
+            let decimals = 0;
+            try {
+                decimals = await from.chain.assetDecimals(transaction.asset);
+            } catch (error) {
+                // Ignore
+            }
+            reportError(
+                `🔥🔥🔥 [sentinel][${
+                    transaction.fromChain
+                }] ${transaction.fromTxHash.trim()} ${new BigNumber(
+                    transaction.amount,
+                )
+                    .shiftedBy(-decimals)
+                    .toFixed()} ${transaction.asset}`,
+            );
+            transaction.sentried = true;
+        }
+
+        return transaction;
     } catch (error) {
         logger.error(
             chalk.red(
