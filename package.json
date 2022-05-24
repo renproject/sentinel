@@ -62,8 +62,12 @@
         }
     },
     "prettier": {
+        "printWidth": 80,
+        "semi": true,
         "singleQuote": false,
+        "tabWidth": 4,
         "trailingComma": "all",
-        "tabWidth": 4
+        "endOfLine": "lf",
+        "arrowParens": "always"
     }
 }

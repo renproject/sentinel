@@ -237,7 +237,7 @@ const submitTransaction = async (
                 // Ignore
             }
             reportError(
-                `🔥🔥🔥 [sentinel][${
+                `🔥🦉🔥 [sentinel][${
                     transaction.fromChain
                 }] ${transaction.fromTxHash.trim()} ${new BigNumber(
                     transaction.amount,
