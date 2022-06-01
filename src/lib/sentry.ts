@@ -13,16 +13,18 @@ export const reportErrorMessage = (message: string, extra?: any): boolean => {
 
     // tslint:disable-next-line: no-any
     Sentry.withScope((scope: any) => {
-        if (extra.network) {
-            scope.setTag("network", extra.network);
-        }
+        if (extra) {
+            if (extra.network) {
+                scope.setTag("network", extra.network);
+            }
 
-        if (extra.token) {
-            scope.setTag("token", extra.token);
-        }
+            if (extra.token) {
+                scope.setTag("token", extra.token);
+            }
 
-        for (const key of Object.keys(extra)) {
-            scope.setExtra(key, extra[key]);
+            for (const key of Object.keys(extra)) {
+                scope.setExtra(key, extra[key]);
+            }
         }
 
         Sentry.captureMessage(message);
