@@ -34,7 +34,6 @@ const getGateways = async <C extends Solana>(
         (acc, chain) => [...acc, ...Object.values(chain.chain.assets)],
         [] as string[],
     );
-    // const assets = ["BTC", "DOGE", "LUNA"];
 
     const mintGateways = (
         await Promise.allSettled(

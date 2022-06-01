@@ -62,11 +62,11 @@ const submitTransaction = async (
             return null;
         }
         if (!to) {
-            logger.error(`No to chain.`);
+            logger.error(`Unsupported target chain ${toChain}.`);
             return null;
         }
         if (!originChain) {
-            logger.error(`No origin chain.`);
+            logger.error(`Unsupported origin chain ${fromChain}.`);
             return null;
         }
 
@@ -211,6 +211,7 @@ const submitTransaction = async (
                 submitter.progress.status === ChainTransactionStatus.Reverted
             ) {
                 transaction.done = true;
+                transaction.ignored = false;
                 if (submitter.progress.response?.tx.out?.txid) {
                     transaction.toTxHash = to.chain.txHashFromBytes(
                         submitter.progress.response.tx.out.txid,
@@ -222,8 +223,7 @@ const submitTransaction = async (
         // If the transaction is older than TRANSACTION_SENTRY_DELAY,
         // and hasn't been completed or sentried yet, report an
         // error to Sentry.
-        const timePassed =
-            (transaction.created_at.getTime() - Date.now()) / 1000;
+        const timePassed = Date.now() - transaction.created_at.getTime();
         if (
             timePassed > TRANSACTION_SENTRY_DELAY &&
             transaction.sentried === false &&
