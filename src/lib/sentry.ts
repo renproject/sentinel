@@ -4,7 +4,7 @@ import chalk from "chalk";
 import { SENTRY_DSN } from "../config";
 
 // tslint:disable-next-line: no-any
-export const reportError = (message: string, extra?: any): boolean => {
+export const reportErrorMessage = (message: string, extra?: any): boolean => {
     console.error(chalk.red(message));
 
     if (!SENTRY_DSN) {

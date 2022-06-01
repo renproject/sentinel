@@ -8,7 +8,7 @@ import { Logger } from "winston";
 import { Transaction } from "../../db/entities/Transaction";
 import GatewayABI from "../ABIs/Gateway.json";
 import { printChain } from "../logger";
-import { reportError } from "../sentry";
+import { reportErrorMessage } from "../sentry";
 
 const gatewaysMemoized: {
     [network: string]: { [chain: string]: { [gateway: string]: string } };
@@ -186,7 +186,7 @@ export const getEVMLogs = async <C extends EthereumBaseChain>(
             });
             transactions.push(burn);
         } catch (error) {
-            reportError(
+            reportErrorMessage(
                 `[sentinel][internal] Skipping ${chain.chain} log ${
                     event.transactionHash
                 }: ${utils.extractError(error)}`,
@@ -238,7 +238,7 @@ export const getEVMLogs = async <C extends EthereumBaseChain>(
             });
             transactions.push(burn);
         } catch (error: any) {
-            reportError(
+            reportErrorMessage(
                 `[sentinel][internal] Skipping ${chain.chain} log ${
                     event.transactionHash
                 }: ${utils.extractError(error)}`,
@@ -290,7 +290,7 @@ export const getEVMLogs = async <C extends EthereumBaseChain>(
             });
             transactions.push(lock);
         } catch (error: any) {
-            reportError(
+            reportErrorMessage(
                 `[sentinel][internal] Skipping ${chain.chain} log ${
                     event.transactionHash
                 }: ${utils.extractError(error)}`,

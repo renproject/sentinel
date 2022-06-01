@@ -21,6 +21,7 @@ import { Transaction } from "../../db/entities/Transaction";
 import { ChainDetails, Chains } from "../../lib/chains";
 import { printChain } from "../../lib/logger";
 import { withTimeout } from "../../lib/misc";
+import { reportErrorMessage } from "../../lib/sentry";
 
 // LOOP_INTERVAL defines how long the bot sleeps for in between checking for
 // trade opportunities.
@@ -236,7 +237,7 @@ const submitTransaction = async (
             } catch (error) {
                 // Ignore
             }
-            reportError(
+            reportErrorMessage(
                 `🔥🦉🔥 [sentinel][${
                     transaction.fromChain
                 }] ${transaction.fromTxHash.trim()} ${new BigNumber(
