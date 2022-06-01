@@ -218,6 +218,13 @@ const submitTransaction = async (
                         submitter.progress.response.tx.out.txid,
                     );
                 }
+                if (transaction.sentried) {
+                    reportErrorMessage(
+                        `✅🦉✅ Resolved: ${
+                            transaction.fromChain
+                        } tx ${transaction.fromTxHash.trim()}`,
+                    );
+                }
             }
         }
 
@@ -238,13 +245,15 @@ const submitTransaction = async (
                 // Ignore
             }
             reportErrorMessage(
-                `🔥🦉🔥 [sentinel][${
+                `🔥🦉🔥 ${
                     transaction.fromChain
-                }] ${transaction.fromTxHash.trim()} ${new BigNumber(
+                } tx ${transaction.fromTxHash.trim()} ${new BigNumber(
                     transaction.amount,
                 )
                     .shiftedBy(-decimals)
-                    .toFixed()} ${transaction.asset}`,
+                    .toFixed()} ${transaction.asset}${
+                    transaction.renVmHash ? ` (${transaction.renVmHash})` : ""
+                }`,
             );
             transaction.sentried = true;
         }

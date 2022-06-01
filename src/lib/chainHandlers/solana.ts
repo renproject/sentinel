@@ -101,7 +101,7 @@ export const getSolanaLogs = async <C extends Solana>(
                         ),
                 );
 
-                if (burn) {
+                if (burn && burn.txHash) {
                     logger.info(
                         `[${printChain(
                             chain.chain,
