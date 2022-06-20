@@ -24,6 +24,10 @@ export const createChains = async (
         chain: "BinanceSmartChain",
         synced_state: "1929336",
     });
+    const catalog = new Chain({
+        chain: "Catalog",
+        synced_state: "0",
+    });
     const ethereum = new Chain({
         chain: "Ethereum",
         synced_state: "9736758",
@@ -43,6 +47,7 @@ export const createChains = async (
         arbitrum,
         avalanche,
         bsc,
+        catalog,
         fantom,
         // goerli,
         polygon,

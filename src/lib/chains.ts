@@ -4,6 +4,7 @@ import {
     BinanceSmartChain,
     Bitcoin,
     BitcoinCash,
+    Catalog,
     DigiByte,
     Dogecoin,
     Ethereum,
@@ -68,13 +69,14 @@ export const initializeChain = <T extends ChainCommon>(
         }
 
         // EVM chains
-        case Ethereum.chain:
-        case BinanceSmartChain.chain:
-        case Fantom.chain:
-        case Polygon.chain:
         case Arbitrum.chain:
         case Avalanche.chain:
-        case Goerli.chain: {
+        case BinanceSmartChain.chain:
+        case Catalog.chain:
+        case Ethereum.chain:
+        case Fantom.chain:
+        case Goerli.chain:
+        case Polygon.chain: {
             // case Kava.chain:
             const provider = new ethers.providers.JsonRpcProvider(
                 Chain.chain === "Ethereum"
@@ -105,6 +107,7 @@ const maxConfirmations = {
     Arbitrum: "18446744073709551615",
     Avalanche: "1500000",
     BinanceSmartChain: "2000000",
+    Catalog: "500000",
     Ethereum: "500000",
     Fantom: "6500000",
     Polygon: "3000000",
@@ -177,6 +180,7 @@ export const initializeChains = (
     Arbitrum: EVMChain(Arbitrum, network, logger),
     Avalanche: EVMChain(Avalanche, network, logger),
     BinanceSmartChain: EVMChain(BinanceSmartChain, network, logger),
+    Catalog: EVMChain(Catalog, network, logger),
     Ethereum: EVMChain(Ethereum, network, logger),
     Fantom: EVMChain(Fantom, network, logger),
     // Goerli: EVMChain(Goerli, network, logger),

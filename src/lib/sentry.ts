@@ -1,4 +1,4 @@
-const Sentry = require("@sentry/node");
+import Sentry from "@sentry/node";
 import chalk from "chalk";
 
 import { SENTRY_DSN } from "../config";

@@ -71,6 +71,12 @@ const submitTransaction = async (
             return null;
         }
 
+        logger.info(
+            `[renvm-tx] Checking ${printChain(
+                from.chain.chain,
+            )}->${asset}->${printChain(to.chain.chain)}...`,
+        );
+
         const txid = from.chain.txHashToBytes(fromTxHash);
 
         let toAddress;
@@ -311,8 +317,8 @@ const syncChainTransactions = async (
     }
 };
 
-export const PENDING_TX_CHECK = 10; // iterations
-export const SENTRIED_TX_CHECK = 100; // iterations
+export const PENDING_TX_CHECK = 5; // iterations
+export const SENTRIED_TX_CHECK = 20; // iterations
 
 export const blockchainSyncerService = (
     renJS: RenJS,

@@ -92,7 +92,7 @@ export const getEVMLogs = async <C extends EthereumBaseChain>(
 
     const fromBlock = BigNumber.max(
         syncedState ? new BigNumber(syncedState).plus(1) : new BigNumber(0),
-        latestBlock.minus(maximumConfirmations),
+        latestBlock.minus(maximumConfirmations || latestBlock),
     );
 
     // No blocks to fetch.
