@@ -42,6 +42,10 @@ export const createChains = async (
         chain: "Solana",
         synced_state: "{}",
     });
+    const optimism = new Chain({
+        chain: "Optimism",
+        synced_state: "14250000",
+    });
     await chainRepository.save([
         ethereum,
         arbitrum,
@@ -52,6 +56,7 @@ export const createChains = async (
         // goerli,
         polygon,
         solana,
+        optimism,
     ]);
 };
 
@@ -87,6 +92,13 @@ export const connectDatabase = async (
     await connection.showMigrations();
     await connection.runMigrations();
     await connection.synchronize();
+
+    const chainRepository = connection.getRepository(Chain);
+    const optimism = new Chain({
+        chain: "Optimism",
+        synced_state: "14250000",
+    });
+    await chainRepository.save([optimism]);
 
     if (RESET) {
         logger.info(`Populating database...`);
