@@ -1,3 +1,4 @@
+import { Chain } from "@renproject/chains";
 import chalk from "chalk";
 import winston from "winston";
 
@@ -47,28 +48,34 @@ const color =
 
 export const colors = chalk;
 
+const chainColors: { [chain in Chain]: string } = {
+    [Chain.Arbitrum]: "#28A0F0",
+    [Chain.Avalanche]: "#e84142",
+    [Chain.BinanceSmartChain]: "#f9b72d",
+    [Chain.Bitcoin]: "#f7931a",
+    [Chain.BitcoinCash]: "#6CC64B",
+    [Chain.Catalog]: "#2CC995",
+    [Chain.DigiByte]: "#0063CF",
+    [Chain.Dogecoin]: "#C2A633",
+    [Chain.Ethereum]: "#627eea",
+    [Chain.Fantom]: "#1969ff",
+    [Chain.Filecoin]: "#0090FF",
+    [Chain.Goerli]: "#afeeee",
+    [Chain.Kava]: "#FF433E",
+    [Chain.Moonbeam]: "#53CBC8",
+    [Chain.Optimism]: "#FF0420",
+    [Chain.Polygon]: "#8247e5",
+    [Chain.Solana]: "#14f195",
+    [Chain.Terra]: "#F9D85E",
+    [Chain.Zcash]: "#F3B63B",
+};
+
 /**
  * Print the name of a chain in a color associated with the chain (e.g. )
  */
 export const printChain = (chain: string, { pad } = { pad: true }): string => {
-    const color: chalk.Chalk =
-        chain === "Ethereum"
-            ? chalk.hex("#627eea")
-            : chain === "Solana"
-            ? chalk.hex("#14f195")
-            : chain === "BinanceSmartChain"
-            ? chalk.hex("#f9b72d")
-            : chain === "Fantom"
-            ? chalk.hex("#1969ff")
-            : chain === "Polygon"
-            ? chalk.hex("#8247e5")
-            : chain === "Avalanche"
-            ? chalk.hex("#e84142")
-            : chain === "Goerli"
-            ? chalk.keyword("paleturquoise")
-            : chain === "Bitcoin"
-            ? chalk.hex("#f7931a")
-            : chalk.cyan;
+    const color = chalk.hex(chainColors[chain] || "#ffffff");
+
     if (chain === "BinanceSmartChain") {
         chain = "BSC";
     }

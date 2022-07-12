@@ -1,5 +1,5 @@
 import RenJS from "@renproject/ren";
-import { RenVMCrossChainTxSubmitter } from "@renproject/ren/build/main/renVMTxSubmitter";
+import { RenVMCrossChainTxSubmitter } from "@renproject/ren/renVMTxSubmitter";
 import {
     ChainTransactionStatus,
     decodeRenVMSelector,
@@ -318,7 +318,7 @@ const syncChainTransactions = async (
 };
 
 export const PENDING_TX_CHECK = 5; // iterations
-export const SENTRIED_TX_CHECK = 20; // iterations
+export const SENTRIED_TX_CHECK = 5; // iterations
 
 export const blockchainSyncerService = (
     renJS: RenJS,

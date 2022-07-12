@@ -1,9 +1,5 @@
 import { Solana } from "@renproject/chains";
-import {
-    GatewayLayout,
-    GatewayStateKey,
-} from "@renproject/chains-solana/build/main/layouts";
-import { getBurnFromNonce } from "@renproject/chains-solana/build/main/utils";
+import { getBurnFromNonce } from "@renproject/chains-solana/utils";
 import { InputChainTransaction, RenNetwork, utils } from "@renproject/utils";
 import { PublicKey } from "@solana/web3.js";
 import BigNumber from "bignumber.js";

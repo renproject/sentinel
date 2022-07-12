@@ -542,13 +542,13 @@
   resolved "https://registry.yarnpkg.com/@protobufjs/utf8/-/utf8-1.1.0.tgz#a777360b5b39a1a2e5106f8e858f2fd2d060c570"
   integrity sha1-p3c2C1s5oaLlEG+OhY8v0tBgxXA=
 
-"@renproject/chains-bitcoin@^3.2.0":
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/@renproject/chains-bitcoin/-/chains-bitcoin-3.2.0.tgz#39afe56b3065a02c137f83d4bab6c98d8a2002c9"
-  integrity sha512-CfCZcPnvb3YUsusiC81N4JZ13rnNfljU+s2OCT0DIruoWvrYy6brd64Cfwtir+cK84t/8u4Su6E6uOXXC3vRVw==
+"@renproject/chains-bitcoin@^3.4.1":
+  version "3.4.1"
+  resolved "https://registry.yarnpkg.com/@renproject/chains-bitcoin/-/chains-bitcoin-3.4.1.tgz#0e53e46bfa463060d35689899a4408ba1809c632"
+  integrity sha512-e2j/sbj3hE4wra/0MdCxz9DgV1hBM+KwWNWaU56aTm/Wgww0gd2PkopveTtE/zdb1/soAli3iGU8GJnriNbWOQ==
   dependencies:
     "@noble/hashes" "1.1.1"
-    "@renproject/utils" "^3.2.0"
+    "@renproject/utils" "^3.4.1"
     "@types/bchaddrjs" "^0.4.0"
     "@types/bs58" "^4.0.1"
     "@types/bs58check" "2.1.0"
@@ -562,43 +562,43 @@
     qs "^6.10.5"
     wallet-address-validator "^0.2.4"
 
-"@renproject/chains-ethereum@^3.2.0":
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/@renproject/chains-ethereum/-/chains-ethereum-3.2.0.tgz#6af9cf1c5d3fe1cc1e0746656f65839bf006f53a"
-  integrity sha512-MyEWKwennb18w/Y3lZaBirlixcOZgrDsvQf5ur3pMcM8T1esMDThWPmcJazjOkfeArdTnvAzIViwQeMBzrXSjg==
+"@renproject/chains-ethereum@^3.4.1":
+  version "3.4.1"
+  resolved "https://registry.yarnpkg.com/@renproject/chains-ethereum/-/chains-ethereum-3.4.1.tgz#236049c34831e099265b062b36d54ba2f83016ec"
+  integrity sha512-YMqQQ9ev84acJpAJP1IIxltzxag+c6gjbrp9NZSinEt+MJSm0rvZBf7rKa6eM9iSSwuqscgva34+0756OOxYKw==
   dependencies:
     "@ethersproject/abi" "^5.6.3"
     "@ethersproject/bytes" "^5.6.1"
     "@ethersproject/providers" "^5.6.8"
-    "@renproject/utils" "^3.2.0"
+    "@renproject/utils" "^3.4.1"
     "@types/elliptic" "^6.4.14"
     bignumber.js "^9.0.2"
     elliptic "^6.5.4"
     ethers "^5.6.8"
 
-"@renproject/chains-filecoin@^3.2.0":
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/@renproject/chains-filecoin/-/chains-filecoin-3.2.0.tgz#7a5539b4a706b1c99137a04083f06ef00f8c2ba5"
-  integrity sha512-C2hSpNwrNfNmHxZnuVwCJsUE6BnygQa8VmU2zjx+b0GCY/D01VqxUT0fpS1FEV+kI9SzK4lOlXOhx5iQOx740Q==
+"@renproject/chains-filecoin@^3.4.1":
+  version "3.4.1"
+  resolved "https://registry.yarnpkg.com/@renproject/chains-filecoin/-/chains-filecoin-3.4.1.tgz#a909d6ebd6d77394beeece39ed14713401945257"
+  integrity sha512-02RUq7v2qFr7N9gp7M9sISCa4xzLWM7l+19HQnPqsCQTsMNyhSaqTE5ViTlv1+175VTObpqbz5Ijja4fGdMUog==
   dependencies:
     "@glif/filecoin-address" "^1.1.0"
     "@glif/filecoin-rpc-client" "^1.1.0"
-    "@renproject/utils" "^3.2.0"
+    "@renproject/utils" "^3.4.1"
     "@types/elliptic" "^6.4.14"
     bignumber.js "^9.0.2"
     blakejs "^1.2.1"
     elliptic "^6.5.4"
     multiformats "^9.6.5"
 
-"@renproject/chains-solana@^3.2.0":
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/@renproject/chains-solana/-/chains-solana-3.2.0.tgz#60312e088b1e27dba8fef930c765f75ae33e7379"
-  integrity sha512-JZPVcIX17OFZqhNE1qm/jW63hICVj/jGEcO9n8iAYG0tVyA3MTNR+43gjof0A469BF6V9vMjaYfRNjLs5iY1oA==
+"@renproject/chains-solana@^3.4.1":
+  version "3.4.1"
+  resolved "https://registry.yarnpkg.com/@renproject/chains-solana/-/chains-solana-3.4.1.tgz#53cde4447df2f5b0bb01b696599f7ad031138e31"
+  integrity sha512-6bAR/ImCeDQ4goAqwGIrxcgOi2wN+ZT6FUdnJuQPR6xStg/oZcFQ9Hl6uvkgjsvmU+47R8DR4MK2K1LE5wAGwA==
   dependencies:
     "@project-serum/associated-token" "^0.1.1"
     "@project-serum/borsh" "^0.2.5"
     "@project-serum/sol-wallet-adapter" "^0.2.6"
-    "@renproject/utils" "^3.2.0"
+    "@renproject/utils" "^3.4.1"
     "@solana/buffer-layout" "^4.0.0"
     "@solana/spl-token" "0.2.0"
     "@solana/web3.js" "1.44.0"
@@ -611,54 +611,54 @@
     ed25519-hd-key "^1.2.0"
     tweetnacl "^1.0.3"
 
-"@renproject/chains-terra@^3.2.0":
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/@renproject/chains-terra/-/chains-terra-3.2.0.tgz#454ce24807c09f2698ec932c5820733f369628d0"
-  integrity sha512-8PInxYxIWX3dxSy6TRFudn4RBImgepTZxhep04tfpFnryE0rt255mbijw+K1C8QzbE7jAEg1mjbnktvKytX+oQ==
+"@renproject/chains-terra@^3.4.1":
+  version "3.4.1"
+  resolved "https://registry.yarnpkg.com/@renproject/chains-terra/-/chains-terra-3.4.1.tgz#a708cba231502dd31b38955be8e617d90b846c07"
+  integrity sha512-AKedh/HmE88260Wt8FQSu9BgnpreLAc3qS3iFgMmt553dCxtUdWHXU1pNDGve2/JnSuklaNIq1ig/akYgvTheg==
   dependencies:
-    "@renproject/utils" "^3.2.0"
+    "@renproject/utils" "^3.4.1"
     "@terra-money/terra.js" "3.1.3"
     "@types/elliptic" "^6.4.14"
     bech32 "^2.0.0"
     bignumber.js "^9.0.2"
     elliptic "^6.5.4"
 
-"@renproject/chains@^3.2.0":
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/@renproject/chains/-/chains-3.2.0.tgz#883b70cdf9bf3834c441aa4e0e8884ed339e4ed4"
-  integrity sha512-uRFl5qw48sLLIGVg69l2NyL6Jjh8XqBo9O16QM8WqULF9mHTco3SfGdA948tX5EC0s2lfr86eJbdufAnWn0OUw==
+"@renproject/chains@^3.4.1":
+  version "3.4.1"
+  resolved "https://registry.yarnpkg.com/@renproject/chains/-/chains-3.4.1.tgz#9767333a52231148629934701b224c97de990d61"
+  integrity sha512-kx1JIDw0UP+pV5PKkA05BqSbQx8U8xrn1sOqZAZkop8e+4U44zQuYm2I7efHWKDRUyk2dT6rwlDLEhMUNWt7xQ==
   dependencies:
-    "@renproject/chains-bitcoin" "^3.2.0"
-    "@renproject/chains-ethereum" "^3.2.0"
-    "@renproject/chains-filecoin" "^3.2.0"
-    "@renproject/chains-solana" "^3.2.0"
-    "@renproject/chains-terra" "^3.2.0"
-    "@renproject/utils" "^3.2.0"
+    "@renproject/chains-bitcoin" "^3.4.1"
+    "@renproject/chains-ethereum" "^3.4.1"
+    "@renproject/chains-filecoin" "^3.4.1"
+    "@renproject/chains-solana" "^3.4.1"
+    "@renproject/chains-terra" "^3.4.1"
+    "@renproject/utils" "^3.4.1"
 
-"@renproject/provider@^3.2.0":
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/@renproject/provider/-/provider-3.2.0.tgz#bdc92bd81950f1906ee2eb89abb2cd790e856a08"
-  integrity sha512-U1bJT8co8OuKujsX++8w2W5+j5XZPQPD73c63RLiRnLTtXifGnJWMRq0uhdedl/5rs0HQ8AFuNVtktjW7uzuRQ==
+"@renproject/provider@^3.4.1":
+  version "3.4.1"
+  resolved "https://registry.yarnpkg.com/@renproject/provider/-/provider-3.4.1.tgz#55d2a7063a06a8e36fdab38c6f109edae51402bd"
+  integrity sha512-MIBJkhHZ0jYirDCj7zwLmY3TMD0LbcOynthDo8CzHmCaUv0CbZXRsGlGjMhg5za/SMNCeStFTT4Mav3aQeFvsg==
   dependencies:
-    "@renproject/utils" "^3.2.0"
+    "@renproject/utils" "^3.4.1"
     axios "^0.27.2"
     bignumber.js "^9.0.2"
 
-"@renproject/ren@^3.2.0":
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/@renproject/ren/-/ren-3.2.0.tgz#215d8f98c091fedc99bbce6143d2461833bb73d9"
-  integrity sha512-vieGf4BiRvVVfOuvtKZejM0q0JkVTKMl14sLZ7fNXzYhQUfbWrQOId6SZRYjwYnIvS+zke123clDX8rpMp0sqg==
+"@renproject/ren@^3.4.1":
+  version "3.4.1"
+  resolved "https://registry.yarnpkg.com/@renproject/ren/-/ren-3.4.1.tgz#0e3a51c968a286db640583fe1bf6fbddc587a1a7"
+  integrity sha512-e3GbQJcbS6PbUSP+1yTpvGZ168C77+XV/iaGdX2d7vt1VryjCl9CP0HL4TXg9w8EfFsM2XefLB+y7KZugEhOHw==
   dependencies:
-    "@renproject/provider" "^3.2.0"
-    "@renproject/utils" "^3.2.0"
+    "@renproject/provider" "^3.4.1"
+    "@renproject/utils" "^3.4.1"
     bignumber.js "^9.0.2"
     events "^3.3.0"
     immutable "^4.1.0"
 
-"@renproject/utils@^3.2.0":
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/@renproject/utils/-/utils-3.2.0.tgz#c2490c64b4b40c8971e81d38d9259d32f2da7f44"
-  integrity sha512-TlThbZZ59B8kVM6fNpalLzQAM1jaXUFyX6OXFmtMRFhLTop8jiqUamyh29IcU6ihBg/fGI4X4kVrlZUKViLS9g==
+"@renproject/utils@^3.4.1":
+  version "3.4.1"
+  resolved "https://registry.yarnpkg.com/@renproject/utils/-/utils-3.4.1.tgz#8cec25807ab18b0466ff2d2a59c3d0fa60186f2b"
+  integrity sha512-2L+JP7hwazxPxefrOGEmZT5VGy98f3twznzxIDMzfkidT2eDWJ6C2gstx9b6BZlxxeIY2Z7Znjkaz/6r87XPZw==
   dependencies:
     "@noble/hashes" "1.1.1"
     "@types/events" "3.0.0"

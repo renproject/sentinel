@@ -1,5 +1,5 @@
-import { EthereumBaseChain } from "@renproject/chains-ethereum/build/main/base";
-import { getGatewayRegistryInstance } from "@renproject/chains-ethereum/build/main/contracts";
+import { EthereumBaseChain } from "@renproject/chains-ethereum/base";
+import { getGatewayRegistryInstance } from "@renproject/chains-ethereum/contracts";
 import { RenNetwork, utils } from "@renproject/utils";
 import BigNumber from "bignumber.js";
 import { Interface, LogDescription } from "ethers/lib/utils";

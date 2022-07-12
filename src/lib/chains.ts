@@ -11,12 +11,13 @@ import {
     Fantom,
     Filecoin,
     Goerli,
+    Optimism,
     Polygon,
     Solana,
     Terra,
     Zcash,
 } from "@renproject/chains";
-import { EthereumBaseChain } from "@renproject/chains-ethereum/build/main/base";
+import { EthereumBaseChain } from "@renproject/chains-ethereum/base";
 import { Chain, ChainCommon, RenNetwork } from "@renproject/utils";
 import { ethers } from "ethers";
 import { Logger } from "winston";
@@ -76,12 +77,13 @@ export const initializeChain = <T extends ChainCommon>(
         case Ethereum.chain:
         case Fantom.chain:
         case Goerli.chain:
-        case Polygon.chain: {
+        case Polygon.chain:
+        case Optimism.chain: {
             // case Kava.chain:
             const provider = new ethers.providers.JsonRpcProvider(
                 Chain.chain === "Ethereum"
                     ? `https://mainnet.infura.io/v3/${INFURA_KEY}`
-                    : (Chain as unknown as typeof Ethereum).configMap[network]
+                    : (Chain as unknown as typeof Ethereum).configMap[network]!
                           .config.rpcUrls[0],
             );
             return new (Chain as unknown as typeof Ethereum)({
@@ -119,7 +121,7 @@ const EVMChain = <C extends typeof EthereumBaseChain>(
     logger: Logger,
 ): ChainDetails<string> => {
     const chain: EthereumBaseChain = initializeChain(
-        chainClass,
+        chainClass as typeof EthereumBaseChain,
         network,
         logger,
     );
@@ -179,6 +181,7 @@ export const initializeChains = (
     // EVM cains
     Arbitrum: EVMChain(Arbitrum, network, logger),
     Avalanche: EVMChain(Avalanche, network, logger),
+    Optimism: EVMChain(Optimism, network, logger),
     BinanceSmartChain: EVMChain(BinanceSmartChain, network, logger),
     Catalog: EVMChain(Catalog, network, logger),
     Ethereum: EVMChain(Ethereum, network, logger),
