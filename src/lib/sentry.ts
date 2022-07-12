@@ -1,4 +1,4 @@
-import Sentry from "@sentry/node";
+import { captureMessage, withScope } from "@sentry/node";
 import chalk from "chalk";
 
 import { SENTRY_DSN } from "../config";
@@ -12,7 +12,7 @@ export const reportErrorMessage = (message: string, extra?: any): boolean => {
     }
 
     // tslint:disable-next-line: no-any
-    Sentry.withScope((scope: any) => {
+    withScope((scope: any) => {
         if (extra) {
             if (extra.network) {
                 scope.setTag("network", extra.network);
@@ -27,7 +27,7 @@ export const reportErrorMessage = (message: string, extra?: any): boolean => {
             }
         }
 
-        Sentry.captureMessage(message);
+        captureMessage(message);
     });
     // Error was only reported correctly if SENTRY_DSN is set.
     return true;
