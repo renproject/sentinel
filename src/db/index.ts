@@ -93,13 +93,6 @@ export const connectDatabase = async (
     await connection.runMigrations();
     await connection.synchronize();
 
-    const chainRepository = connection.getRepository(Chain);
-    const optimism = new Chain({
-        chain: "Optimism",
-        synced_state: "14250000",
-    });
-    await chainRepository.save([optimism]);
-
     if (RESET) {
         logger.info(`Populating database...`);
         await createChains(connection, network);
