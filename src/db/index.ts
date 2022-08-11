@@ -84,7 +84,7 @@ export const connectDatabase = async (
         }
     }
 
-    const RESET = true;
+    const RESET = false;
     if (RESET) {
         logger.info(`Resetting database...`);
         await connection.dropDatabase();
