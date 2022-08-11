@@ -39,8 +39,9 @@ const main = async (_args: readonly string[]) => {
         5,
         10 * utils.sleep.SECONDS,
     )) as RenNetwork;
+    console.log(`Network: ${network}.`);
     const chains = await initializeChains(network, logger);
-    const renJS = new RenJS("mainnet");
+    const renJS = new RenJS(network);
 
     // Database
     const database = await connectDatabase(logger, network);
