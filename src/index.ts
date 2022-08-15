@@ -44,7 +44,7 @@ const main = async (_args: readonly string[]) => {
     const renJS = new RenJS(network);
 
     // Database
-    const database = await connectDatabase(logger, network);
+    const database = await connectDatabase(logger, network, chains);
 
     // Set up Blockchain Syncer
     const blockchainSyncer = blockchainSyncerService(

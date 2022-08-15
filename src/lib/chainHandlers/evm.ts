@@ -79,13 +79,17 @@ export const getEVMLogs = async <C extends EthereumBaseChain>(
     chain: C,
     network: RenNetwork,
     syncedState: string,
-    maximumConfirmations: number,
+    maximumConfirmations: number | undefined,
     logger: Logger,
 ): Promise<{ transactions: Transaction[]; newState: string }> => {
     const transactions: Transaction[] = [];
 
     let latestBlock = new BigNumber(
-        await chain.provider.getBlockNumber(),
+        await utils.tryNTimes(
+            () => chain.provider.getBlockNumber(),
+            5,
+            1 * utils.sleep.SECONDS,
+        ),
     ).minus(LATEST_BLOCK_OFFSET);
 
     const gateways = await getGateways(network, chain);
@@ -128,22 +132,43 @@ export const getEVMLogs = async <C extends EthereumBaseChain>(
     };
     const [burnEvents, burnToChainEvents, lockToChainEvents] =
         await Promise.all([
-            chain.provider.getLogs({
-                ...logFilter,
-                topics: [utils.Ox(utils.keccak256(Buffer.from(LOG_BURN)))],
-            }),
-            chain.provider.getLogs({
-                ...logFilter,
-                topics: [
-                    utils.Ox(utils.keccak256(Buffer.from(LOG_BURN_TO_CHAIN))),
-                ],
-            }),
-            chain.provider.getLogs({
-                ...logFilter,
-                topics: [
-                    utils.Ox(utils.keccak256(Buffer.from(LOG_LOCK_TO_CHAIN))),
-                ],
-            }),
+            utils.tryNTimes(
+                () =>
+                    chain.provider.getLogs({
+                        ...logFilter,
+                        topics: [
+                            utils.Ox(utils.keccak256(Buffer.from(LOG_BURN))),
+                        ],
+                    }),
+                5,
+                1 * utils.sleep.SECONDS,
+            ),
+            utils.tryNTimes(
+                () =>
+                    chain.provider.getLogs({
+                        ...logFilter,
+                        topics: [
+                            utils.Ox(
+                                utils.keccak256(Buffer.from(LOG_BURN_TO_CHAIN)),
+                            ),
+                        ],
+                    }),
+                5,
+                1 * utils.sleep.SECONDS,
+            ),
+            utils.tryNTimes(
+                () =>
+                    chain.provider.getLogs({
+                        ...logFilter,
+                        topics: [
+                            utils.Ox(
+                                utils.keccak256(Buffer.from(LOG_LOCK_TO_CHAIN)),
+                            ),
+                        ],
+                    }),
+                5,
+                1 * utils.sleep.SECONDS,
+            ),
         ]);
 
     for (const event of burnEvents) {

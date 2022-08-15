@@ -2,67 +2,16 @@ import { RenNetwork } from "@renproject/utils";
 import chalk from "chalk";
 import { Connection, createConnection, getConnectionManager } from "typeorm";
 import { Logger } from "winston";
+import { Chains } from "../lib/chains";
+import { printChain } from "../lib/logger";
 
 import config from "./config/ormconfig";
 import { Chain } from "./entities/Chain";
 
-export const createChains = async (
-    connection: Connection,
-    _network: RenNetwork,
-) => {
-    const chainRepository = connection.getRepository(Chain);
-
-    const arbitrum = new Chain({
-        chain: "Arbitrum",
-        synced_state: "0", // "205834",
-    });
-    const avalanche = new Chain({
-        chain: "Avalanche",
-        synced_state: "0", // "2177304",
-    });
-    const bsc = new Chain({
-        chain: "BinanceSmartChain",
-        synced_state: "0", // "1929336",
-    });
-    const catalog = new Chain({
-        chain: "Catalog",
-        synced_state: "0", // "0",
-    });
-    const ethereum = new Chain({
-        chain: "Ethereum",
-        synced_state: "0", // "9736758",
-    });
-    const fantom = new Chain({ chain: "Fantom", synced_state: "0" }); // "7496306"
-    // const goerli = new Chain({ chain: "Goerli", synced_state: "0", // null });
-    const polygon = new Chain({
-        chain: "Polygon",
-        synced_state: "0", // "14937138",
-    });
-    const solana = new Chain({
-        chain: "Solana",
-        synced_state: "{}",
-    });
-    const optimism = new Chain({
-        chain: "Optimism",
-        synced_state: "0", // "14250000",
-    });
-    await chainRepository.save([
-        ethereum,
-        arbitrum,
-        avalanche,
-        bsc,
-        catalog,
-        fantom,
-        // goerli,
-        polygon,
-        solana,
-        optimism,
-    ]);
-};
-
 export const connectDatabase = async (
     logger: Logger,
     network: RenNetwork,
+    chains: Chains,
 ): Promise<Connection> => {
     let connection: Connection;
 
@@ -84,8 +33,7 @@ export const connectDatabase = async (
         }
     }
 
-    const RESET = false;
-    if (RESET) {
+    if (process.env.RESET_DB) {
         logger.info(`Resetting database...`);
         await connection.dropDatabase();
     }
@@ -93,9 +41,32 @@ export const connectDatabase = async (
     await connection.runMigrations();
     await connection.synchronize();
 
-    if (RESET) {
-        logger.info(`Populating database...`);
-        await createChains(connection, network);
+    const chainRepository = connection.getRepository(Chain);
+
+    for (const chain of Object.keys(chains)) {
+        const details = chains[chain];
+        if (details.defaultSyncedState) {
+            console.log(
+                `Checking that ${printChain(
+                    details.chain.chain,
+                )} exists in database...`,
+            );
+            if (
+                !(await chainRepository.findOneBy({
+                    chain: details.chain.chain,
+                }))
+            ) {
+                console.log(
+                    `Adding ${details.chain.chain} to database with default state: ${details.defaultSyncedState}`,
+                );
+                await chainRepository.save(
+                    new Chain({
+                        chain: details.chain.chain,
+                        synced_state: details.defaultSyncedState,
+                    }),
+                );
+            }
+        }
     }
 
     return connection;

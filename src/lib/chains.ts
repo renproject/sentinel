@@ -11,14 +11,19 @@ import {
     Fantom,
     Filecoin,
     Goerli,
+    Kava,
+    Moonbeam,
     Optimism,
     Polygon,
+    resolveRpcEndpoints,
     Solana,
     Terra,
     Zcash,
 } from "@renproject/chains";
 import { EthereumBaseChain } from "@renproject/chains-ethereum/base";
+import { ResponseQueryConfig } from "@renproject/provider";
 import { Chain, ChainCommon, RenNetwork } from "@renproject/utils";
+import BigNumber from "bignumber.js";
 import { ethers } from "ethers";
 import { Logger } from "winston";
 
@@ -29,9 +34,11 @@ import { getSolanaLogs } from "./chainHandlers/solana";
 
 export interface ChainDetails<State = any> {
     chain: Chain;
+    defaultSyncedState?: string;
     getLogs?: (
         synced_state: State,
         chains: Chains,
+        renVMConfig: ResponseQueryConfig,
     ) => Promise<{ transactions: Transaction[]; newState: State }>;
 }
 
@@ -77,15 +84,19 @@ export const initializeChain = <T extends ChainCommon>(
         case Ethereum.chain:
         case Fantom.chain:
         case Goerli.chain:
-        case Polygon.chain:
-        case Optimism.chain: {
-            // case Kava.chain:
-            const provider = new ethers.providers.JsonRpcProvider(
-                Chain.chain === "Ethereum"
-                    ? `https://mainnet.infura.io/v3/${INFURA_KEY}`
-                    : (Chain as unknown as typeof Ethereum).configMap[network]!
-                          .config.rpcUrls[0],
+        case Kava.chain:
+        case Moonbeam.chain:
+        case Optimism.chain:
+        case Polygon.chain: {
+            const urls = resolveRpcEndpoints(
+                (Chain as unknown as typeof Ethereum).configMap[network]!.config
+                    .rpcUrls,
+                {
+                    INFURA_API_KEY: process.env.INFURA_KEY,
+                },
             );
+
+            const provider = new ethers.providers.JsonRpcProvider(urls[0]);
             return new (Chain as unknown as typeof Ethereum)({
                 network,
                 provider,
@@ -105,18 +116,9 @@ export const initializeChain = <T extends ChainCommon>(
     }
 };
 
-const maxConfirmations = {
-    Arbitrum: "18446744073709551615",
-    Avalanche: "1500000",
-    BinanceSmartChain: "2000000",
-    Catalog: "500000",
-    Ethereum: "500000",
-    Fantom: "6500000",
-    Polygon: "3000000",
-};
-
 const EVMChain = <C extends typeof EthereumBaseChain>(
     chainClass: C,
+    startingBlockNumber: string,
     network: RenNetwork,
     logger: Logger,
 ): ChainDetails<string> => {
@@ -127,12 +129,15 @@ const EVMChain = <C extends typeof EthereumBaseChain>(
     );
     return {
         chain,
-        getLogs: (syncedState: string) =>
+        defaultSyncedState: startingBlockNumber,
+        getLogs: (syncedState: string, _, renVMConfig: ResponseQueryConfig) =>
             getEVMLogs(
                 chain,
                 network,
                 syncedState,
-                maxConfirmations[chain.chain],
+                new BigNumber(
+                    renVMConfig.maxConfirmations[chain.chain] || "0",
+                ).toNumber() || undefined,
                 logger,
             ),
     };
@@ -146,6 +151,7 @@ const SolanaChain = <C extends typeof Solana>(
     const chain: Solana = initializeChain(chainClass, network, logger);
     return {
         chain,
+        defaultSyncedState: "{}",
         getLogs: (syncedState: string, chains: Chains) =>
             getSolanaLogs(chain, network, syncedState, chains, logger),
     };
@@ -179,18 +185,32 @@ export const initializeChains = (
     },
 
     // EVM cains
-    Arbitrum: EVMChain(Arbitrum, network, logger),
-    Avalanche: EVMChain(Avalanche, network, logger),
-    Optimism: EVMChain(Optimism, network, logger),
-    BinanceSmartChain: EVMChain(BinanceSmartChain, network, logger),
-    Catalog: EVMChain(Catalog, network, logger),
-    Ethereum: EVMChain(Ethereum, network, logger),
-    Fantom: EVMChain(Fantom, network, logger),
-    // Goerli: EVMChain(Goerli, network, logger),
-    Polygon: EVMChain(Polygon, network, logger),
+    Arbitrum: EVMChain(Arbitrum, "0" /* 205834 */, network, logger),
+    Avalanche: EVMChain(Avalanche, "0" /* 2177304 */, network, logger),
+    BinanceSmartChain: EVMChain(
+        BinanceSmartChain,
+        "0" /* 1929336 */,
+        network,
+        logger,
+    ),
+    Catalog: EVMChain(Catalog, "0" /* */, network, logger),
+    Ethereum: EVMChain(Ethereum, "0" /* 9736758 */, network, logger),
+    Fantom: EVMChain(Fantom, "0" /* 7496306 */, network, logger),
+    Optimism: EVMChain(Optimism, "0" /* 14250000 */, network, logger),
+    Polygon: EVMChain(Polygon, "0" /* 14937138 */, network, logger),
 
     // Solana
     Solana: SolanaChain(Solana, network, logger),
+
+    // Testnet only networks:
+    ...(network === RenNetwork.Mainnet
+        ? {}
+        : {
+              // EVM
+              Kava: EVMChain(Kava, "0" /* */, network, logger),
+              Moonbeam: EVMChain(Moonbeam, "0" /* */, network, logger),
+              Goerli: EVMChain(Goerli, "0", network, logger),
+          }),
 });
 
 export type Chains = ReturnType<typeof initializeChains>;

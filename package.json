@@ -23,11 +23,11 @@
         "node": ">=8.9"
     },
     "dependencies": {
-        "@renproject/chains": "^3.4.1",
-        "@renproject/chains-solana": "^3.4.1",
-        "@renproject/provider": "^3.4.1",
-        "@renproject/ren": "^3.4.1",
-        "@renproject/utils": "^3.4.1",
+        "@renproject/chains": "^3.4.4",
+        "@renproject/chains-solana": "^3.4.4",
+        "@renproject/provider": "^3.4.4",
+        "@renproject/ren": "^3.4.4",
+        "@renproject/utils": "^3.4.4",
         "@sentry/node": "6.13.2",
         "@types/node": "^16.10.3",
         "@types/pg": "^8.6.1",

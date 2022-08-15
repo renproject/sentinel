@@ -1,3 +1,4 @@
+import { ResponseQueryConfig } from "@renproject/provider";
 import RenJS from "@renproject/ren";
 import { RenVMCrossChainTxSubmitter } from "@renproject/ren/renVMTxSubmitter";
 import {
@@ -63,12 +64,15 @@ const submitTransaction = async (
             return null;
         }
         if (!to) {
-            logger.error(`Unsupported target chain ${toChain}.`);
+            logger.error(
+                `Unsupported target chain ${toChain} with asset ${transaction.asset}.`,
+            );
             return null;
         }
         if (!originChain) {
-            logger.error(`Unsupported origin chain ${fromChain}.`);
-            return null;
+            logger.warn(
+                `Warning: Unknown origin chain of asset asset ${transaction.asset}.`,
+            );
         }
 
         logger.info(
@@ -132,9 +136,12 @@ const submitTransaction = async (
         const ghash = generateGHash(phash, shash, toAddressBytes, nonce);
 
         let selector: string;
-        if (originChain.chain.chain === to.chain.chain) {
+        if (originChain && originChain.chain.chain === to.chain.chain) {
             selector = `${asset}/from${from.chain.chain}`;
-        } else if (originChain.chain.chain === from.chain.chain) {
+        } else if (
+            originChain &&
+            originChain.chain.chain === from.chain.chain
+        ) {
             selector = `${asset}/to${to.chain.chain}`;
         } else {
             selector = `${asset}/from${from.chain.chain}_to${to.chain.chain}`;
@@ -203,7 +210,7 @@ const submitTransaction = async (
             {
                 const { asset, from, to } = decodeRenVMSelector(
                     selector,
-                    originChain.chain.chain || "",
+                    originChain?.chain.chain || "",
                 );
                 logger.info(
                     `[renvm-tx] ${printChain(from)}->${asset}->${printChain(
@@ -284,6 +291,7 @@ const syncChainTransactions = async (
     chain: ChainDetails,
     chains: Chains,
     database: Connection,
+    renVMConfig: ResponseQueryConfig,
     logger: Logger,
 ) => {
     // Skip lock-chains and other unimplemented chains.
@@ -299,6 +307,7 @@ const syncChainTransactions = async (
     const { transactions, newState } = await chain.getLogs(
         chainStorage.synced_state,
         chains,
+        renVMConfig,
     );
 
     chainStorage.synced_state = newState;
@@ -335,6 +344,8 @@ export const blockchainSyncerService = (
             const transactionRepository = await database.getRepository(
                 Transaction,
             );
+
+            const renVMConfig = await renJS.provider.queryConfig();
 
             // Loop every minute.
             for (let iteration = 0; ; iteration++) {
@@ -386,6 +397,7 @@ export const blockchainSyncerService = (
                                 chainDetails,
                                 chains,
                                 database,
+                                renVMConfig,
                                 logger,
                             ),
                             5 * utils.sleep.MINUTES,

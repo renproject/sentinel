@@ -48,6 +48,7 @@ const color =
 
 export const colors = chalk;
 
+// Used for debug logs only.
 const chainColors: { [chain in Chain]: string } = {
     [Chain.Arbitrum]: "#28A0F0",
     [Chain.Avalanche]: "#e84142",
