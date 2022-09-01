@@ -2,13 +2,14 @@ import { ResponseQueryConfig } from "@renproject/provider";
 import RenJS from "@renproject/ren";
 import { RenVMCrossChainTxSubmitter } from "@renproject/ren/renVMTxSubmitter";
 import {
-    ChainTransactionStatus,
-    decodeRenVMSelector,
-    generateGHash,
-    generateNHash,
-    generatePHash,
-    generateSHash,
-    utils,
+  ChainTransactionStatus,
+  decodeRenVMSelector,
+  generateGHash,
+  generateNHash,
+  generatePHash,
+  generateSHash,
+  RenNetwork,
+  utils,
 } from "@renproject/utils";
 import BigNumber from "bignumber.js";
 import bs58 from "bs58";
@@ -22,7 +23,7 @@ import { Transaction } from "../../db/entities/Transaction";
 import { ChainDetails, Chains } from "../../lib/chains";
 import { printChain } from "../../lib/logger";
 import { withTimeout } from "../../lib/misc";
-import { reportErrorMessage } from "../../lib/sentry";
+import { callTransactionWebhook } from "../../lib/webhook";
 
 // LOOP_INTERVAL defines how long the bot sleeps for in between checking for
 // trade opportunities.
@@ -38,6 +39,7 @@ const submitTransaction = async (
     renJS: RenJS,
     chains: Chains,
     logger: Logger,
+    network: RenNetwork,
 ): Promise<Transaction | null> => {
     try {
         const {
@@ -83,6 +85,17 @@ const submitTransaction = async (
 
         const txid = from.chain.txHashToBytes(fromTxHash);
 
+        const getReadableAmount = async () => {
+            try {
+                const decimals = await from.chain.assetDecimals(
+                    transaction.asset,
+                );
+                return new BigNumber(transaction.amount).shiftedBy(-decimals);
+            } catch (error) {
+                return new BigNumber(transaction.amount);
+            }
+        };
+
         let toAddress;
         let toAddressBytes;
         try {
@@ -123,6 +136,8 @@ const submitTransaction = async (
             }
             toAddressBytes = to.chain.addressToBytes(toAddress);
         } catch (error) {
+            transaction.sentried = true;
+
             throw new Error(
                 `Unable to decode ${
                     to.chain.chain
@@ -232,11 +247,20 @@ const submitTransaction = async (
                     );
                 }
                 if (transaction.sentried) {
-                    reportErrorMessage(
-                        `✅🦉✅ Resolved: ${
-                            transaction.fromChain
-                        } tx ${transaction.fromTxHash.trim()}`,
-                    );
+                    callTransactionWebhook({
+                        status: "resolved",
+
+                        network,
+                        asset,
+                        amount: await getReadableAmount(),
+
+                        fromTxHash: transaction.fromTxHash,
+                        renVMHash: transaction.renVmHash,
+                        toTxHash: transaction.toTxHash || undefined,
+
+                        fromChain: from.chain,
+                        toChain: to.chain,
+                    });
                 }
             }
         }
@@ -251,23 +275,20 @@ const submitTransaction = async (
             transaction.done === false &&
             transaction.ignored === false
         ) {
-            let decimals = 0;
-            try {
-                decimals = await from.chain.assetDecimals(transaction.asset);
-            } catch (error) {
-                // Ignore
-            }
-            reportErrorMessage(
-                `🔥🦉🔥 ${
-                    transaction.fromChain
-                } tx ${transaction.fromTxHash.trim()} ${new BigNumber(
-                    transaction.amount,
-                )
-                    .shiftedBy(-decimals)
-                    .toFixed()} ${transaction.asset}${
-                    transaction.renVmHash ? ` (${transaction.renVmHash})` : ""
-                }`,
-            );
+            callTransactionWebhook({
+                status: "error",
+
+                network,
+                asset,
+                amount: await getReadableAmount(),
+
+                fromTxHash: transaction.fromTxHash,
+                renVMHash: transaction.renVmHash,
+                toTxHash: transaction.toTxHash || undefined,
+
+                fromChain: from.chain,
+                toChain: to.chain,
+            });
             transaction.sentried = true;
         }
 
@@ -293,6 +314,7 @@ const syncChainTransactions = async (
     database: Connection,
     renVMConfig: ResponseQueryConfig,
     logger: Logger,
+    network: RenNetwork,
 ) => {
     // Skip lock-chains and other unimplemented chains.
     if (!chain.getLogs) {
@@ -319,6 +341,7 @@ const syncChainTransactions = async (
             renJS,
             chains,
             logger,
+            network,
         );
         if (updatedTransaction) {
             await database.manager.save(updatedTransaction);
@@ -334,6 +357,7 @@ export const blockchainSyncerService = (
     chains: Chains,
     database: Connection,
     logger: Logger,
+    network: RenNetwork,
 ) => {
     return {
         start: async () => {
@@ -379,6 +403,7 @@ export const blockchainSyncerService = (
                             renJS,
                             chains,
                             logger,
+                            network,
                         );
                         if (updatedTransaction) {
                             await transactionRepository.save(
@@ -399,6 +424,7 @@ export const blockchainSyncerService = (
                                 database,
                                 renVMConfig,
                                 logger,
+                                network,
                             ),
                             5 * utils.sleep.MINUTES,
                         );

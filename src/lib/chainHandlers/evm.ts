@@ -101,6 +101,7 @@ export const getEVMLogs = async <C extends EthereumBaseChain>(
 
     // No blocks to fetch.
     if (fromBlock.isGreaterThan(latestBlock)) {
+        logger.info(`[${printChain(chain.chain)}] No new blocks.`);
         return { transactions, newState: syncedState };
     }
 

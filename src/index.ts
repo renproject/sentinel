@@ -52,6 +52,7 @@ const main = async (_args: readonly string[]) => {
         chains,
         database,
         logger,
+        network,
     );
 
     // Start Blockchain Syncer
