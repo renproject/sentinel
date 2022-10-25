@@ -2,14 +2,14 @@ import { ResponseQueryConfig } from "@renproject/provider";
 import RenJS from "@renproject/ren";
 import { RenVMCrossChainTxSubmitter } from "@renproject/ren/renVMTxSubmitter";
 import {
-  ChainTransactionStatus,
-  decodeRenVMSelector,
-  generateGHash,
-  generateNHash,
-  generatePHash,
-  generateSHash,
-  RenNetwork,
-  utils,
+    ChainTransactionStatus,
+    decodeRenVMSelector,
+    generateGHash,
+    generateNHash,
+    generatePHash,
+    generateSHash,
+    RenNetwork,
+    utils,
 } from "@renproject/utils";
 import BigNumber from "bignumber.js";
 import bs58 from "bs58";
@@ -77,14 +77,6 @@ const submitTransaction = async (
             );
         }
 
-        logger.info(
-            `[renvm-tx] Checking ${printChain(
-                from.chain.chain,
-            )}->${asset}->${printChain(to.chain.chain)}...`,
-        );
-
-        const txid = from.chain.txHashToBytes(fromTxHash);
-
         const getReadableAmount = async () => {
             try {
                 const decimals = await from.chain.assetDecimals(
@@ -95,6 +87,16 @@ const submitTransaction = async (
                 return new BigNumber(transaction.amount);
             }
         };
+
+        logger.info(
+            `[renvm-tx] Checking ${printChain(
+                from.chain.chain,
+            )}->${await getReadableAmount()} ${asset}->${printChain(
+                to.chain.chain,
+            )}...`,
+        );
+
+        const txid = from.chain.txHashToBytes(fromTxHash);
 
         let toAddress;
         let toAddressBytes;
